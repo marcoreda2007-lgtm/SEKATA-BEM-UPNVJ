@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\NotificationController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -30,3 +31,10 @@ Route::get('/jadwal', function () {
 Route::get('/admin/peminjaman', function () {
     return view('layouts.app');
 })->middleware(['auth', 'role:admin'])->name('admin.peminjaman.index');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/notifikasi', [NotificationController::class, 'index'])
+        ->name('notifikasi.index');
+    Route::patch('/notifikasi/{notification}', [NotificationController::class, 'markAsRead'])
+        ->name('notifikasi.read');
+});
