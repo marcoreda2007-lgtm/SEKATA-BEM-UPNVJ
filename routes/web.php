@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\BookingQueueController;
+use App\Http\Controllers\BookingDetailController;
 
 Route::get('/', function () {
     if (! Auth::check()) {
@@ -31,3 +32,8 @@ Route::get('/jadwal', function () {
 Route::get('/admin/peminjaman', [BookingQueueController::class, 'index'])
     ->middleware(['auth', 'role:admin'])
     ->name('admin.peminjaman.index');
+
+Route::get('/peminjaman/{id}', [BookingDetailController::class, 'show'])
+    ->whereNumber('id')
+    ->middleware('auth')
+    ->name('peminjaman.show');
