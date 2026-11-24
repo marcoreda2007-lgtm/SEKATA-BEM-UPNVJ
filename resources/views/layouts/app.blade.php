@@ -103,7 +103,7 @@
             font-weight: 600;
         }
 
-        /* Authenticated Sidebar Shell (Kalender bersama.png) */
+        /* Authenticated Sidebar Shell */
         .app-shell {
             display: flex;
             min-height: 100vh;
@@ -117,7 +117,7 @@
             flex-shrink: 0;
         }
         .sidebar-brand {
-            padding: 24px 20px 20px;
+            padding: 22px 20px 18px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             display: flex;
             align-items: center;
@@ -126,24 +126,18 @@
             color: #ffffff;
         }
         .brand-emblem {
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            background: #1B5E3A;
-            border: 2px solid #FACC15;
+            width: 44px;
+            height: 44px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 800;
-            font-size: 11px;
-            color: #FACC15;
             flex-shrink: 0;
-            overflow: hidden;
         }
         .brand-emblem img {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
+            mix-blend-mode: lighten;
         }
         .sidebar-nav {
             padding: 20px 14px;
@@ -239,7 +233,7 @@
         <aside class="sekata-sidebar desktop-only">
             <a href="{{ url('/') }}" class="sidebar-brand">
                 <div class="brand-emblem">
-                    <img src="{{ asset('images/logo-bem.png') }}" alt="BEM" onerror="this.style.display='none'; this.parentElement.textContent='BEM';">
+                    <img src="{{ asset('images/logo-bem.png') }}" alt="BEM UPNVJ">
                 </div>
                 <div>
                     <div class="fw-bold lh-1" style="font-size: 18px; letter-spacing: 0.04em;">SEKATA</div>
@@ -278,7 +272,12 @@
         {{-- Mobile Offcanvas Drawer --}}
         <div class="offcanvas offcanvas-start text-white" tabindex="-1" id="mobileSidebar" style="background-color: var(--hijau-gelap); width: 260px;">
             <div class="offcanvas-header border-bottom border-secondary border-opacity-25">
-                <span class="fw-bold">SEKATA · BEM UPNVJ</span>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="brand-emblem" style="width: 36px; height: 36px;">
+                        <img src="{{ asset('images/logo-bem.jpg') }}" alt="BEM UPNVJ">
+                    </div>
+                    <span class="fw-bold">SEKATA · BEM UPNVJ</span>
+                </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
             </div>
             <div class="offcanvas-body d-flex flex-column p-0">
