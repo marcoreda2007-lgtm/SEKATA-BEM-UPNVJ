@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CalendarController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -23,9 +24,9 @@ Route::post('/logout', [AuthController::class, 'logout'])
     ->middleware('auth')
     ->name('logout');
 
-Route::get('/jadwal', function () {
-    return view('layouts.app');
-})->middleware('auth')->name('jadwal.index');
+Route::get('/jadwal', [CalendarController::class, 'index'])
+    ->middleware('auth')
+    ->name('jadwal.index');
 
 Route::get('/admin/peminjaman', function () {
     return view('layouts.app');
