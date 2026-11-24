@@ -19,28 +19,26 @@
 <p align="center">
   <a href="#local-setup">Local setup</a> ·
   <a href="#booking-workflow">Booking workflow</a> ·
-  <a href="#team-and-ownership">Team</a> ·
-  <a href="https://www.figma.com/design/P16PbuVMeKvhVbPXJ4Aqs9">Earlier Figma prototype</a>
+  <a href="#team-and-ownership">Team</a>
 </p>
 
 SEKATA gives seven fields (*bidang*) and four bureaus (*biro*) one calendar for the BEM secretariat. Units can check availability, submit requests on open slots, and send return evidence. Biro SPPI reviews requests, records decisions with reasons, and verifies the room and key handover.
 
 ## Development status
 
-Status reviewed on **25 November 2026**. The table distinguishes code merged into `main` from work on feature branches. A push to a feature branch does not mean the feature is ready for use.
+Status as of **25 November 2026**. Features under development are not yet available in `main`.
 
-| Feature | Available work | Remaining work |
-| --- | --- | --- |
-| Authentication and shared foundations — Hafiz | Merged into `main`: login/logout, role middleware, shared account/room/booking schema, and a seeder for 10 borrower units plus one SPPI admin. | Verify setup from a fresh clone and replace development credentials before a BEM pilot. |
-| SPPI queue and decisions — Reda | Merged into `main`: database-backed pending queue, admin access control, shared Bootstrap layout, external layout/login CSS, and account/logout styling. | Complete and test approval/rejection with reasons, repeated-request handling, direct SPPI bookings, and notification integration. Decision work remains a local draft, outside `main`. |
-| Calendar and requests — Nabil | Feature branch contains a weekly unit-by-date calendar reading database bookings. | Align styling with Bootstrap; add week controls, request submission, server validation, and MySQL overlap/concurrency checks. |
-| Details and history — Naila | Feature branch contains the owner/admin detail page. Its initial version has also been integrated into Reda's local feature branch; it is not in `main`. | External detail CSS, correct WIB timestamps, accurate history labels, return-evidence integration, and UI review. |
-| Return evidence — Raehansyah | Feature branch contains private two-photo upload, single-photo replacement, SPPI inspection, and feature tests. | Review concurrent updates, integrate the UI with Naila, and verify the full return flow. The tests on this branch have not been independently run during this review. |
-| Notifications — Adis | Feature branch contains the migration, Model, service, controller, and routes. | Add the list view and unread badge; connect request, decision, and inspection triggers; test recipient access and transaction consistency. |
+| Feature | Status |
+| --- | --- |
+| Authentication and shared foundations | Available in `main`: login/logout, role middleware, account/room/booking schema, initial accounts, and shared Bootstrap layout. |
+| SPPI queue | Available in `main`: database-backed pending queue with admin-only access. |
+| SPPI decisions | In development: approval/rejection with reasons and direct SPPI bookings. |
+| Calendar and requests | In development: weekly calendar, request submission, and slot availability checks. |
+| Details and history | Under review: owner/admin detail page. Complete status history remains pending. |
+| Return evidence | In development: private two-photo upload, replacement, and SPPI inspection. |
+| Notifications | In development: recipient-specific notices, unread badge, list, and status triggers. |
 
-**Verification so far.** The local MySQL setup and seed commands completed successfully. The SPPI queue opened in the browser, and an Ekraf account was denied admin access. On the locally integrated detail page, an isolated SQLite test passed owner/admin access, denial for another unit, guest redirection, and invalid/missing-ID checks (1 test, 8 assertions). These checks do not establish MySQL concurrency safety, a complete booking flow, or readiness for a BEM pilot.
-
-The linked Figma file represents an earlier workflow and still needs alignment with the current scope. Use the workflow below as the current design target.
+The full booking and return workflow is not yet ready for operational use.
 
 ## Tech stack
 
@@ -53,7 +51,7 @@ The linked Figma file represents an earlier workflow and still needs alignment w
 | Database | MySQL | Local MySQL or MariaDB with InnoDB |
 | Build | Composer, Vite 7 | PHP dependencies and frontend assets |
 
-The shared layout and login/queue screens use Bootstrap 5 from a CDN, with external CSS in `public/css`. Tailwind and Vite dependencies remain in the scaffold; they are not the styling standard for new SEKATA screens. These shared screens currently need internet access for Bootstrap and Google Fonts.
+The shared screens use Bootstrap 5 from a CDN and external CSS in `public/css`. Internet access is required for Bootstrap and Google Fonts.
 
 ## Local setup
 
@@ -133,10 +131,10 @@ Pending requests do not expire automatically under the current plan. SPPI must p
 | Entity | Purpose |
 | --- | --- |
 | `users` | In `main`: unit identities (`unit_name`, `unit_type`) and roles (`admin`/`unit`). The seeder creates 10 borrower accounts plus one SPPI admin. |
-| `rooms` | In `main`: one secretariat room record. Submission and decision flows must coordinate room-row locking; this is not yet a verified end-to-end guarantee. |
+| `rooms` | In `main`: the shared secretariat room record. |
 | `bookings` | In `main`: `tanggal`, `start_time`, `end_time`, activity, PIC, status (`Menunggu`, `Disetujui`, `Ditolak`, `Periksa Bukti`, `Perlu Perbaikan`, `Selesai`), and decision/inspection fields. No complete status-transition history table is present. |
-| `booking_proofs` | On Raehansyah's branch: private `ruangan` and `kunci` uploads. Server-recorded upload time is distinct from the photo capture timestamp checked by SPPI. |
-| `notifications` | On Adis's branch: recipient-specific notices linked to bookings. UI and cross-feature triggers remain to be integrated. |
+| `booking_proofs` | In development: private `ruangan` and `kunci` uploads. Upload time is distinct from the photo capture timestamp checked by SPPI. |
+| `notifications` | In development: recipient-specific notices linked to bookings, with read/unread state. |
 
 ## Team and ownership
 
@@ -157,8 +155,6 @@ Each member owns the backend and frontend for their assigned feature. The assign
 2. Test the submitted scope, inspect desktop/mobile UI where relevant, and remove replaced or duplicate code. Preserve other members' routes and shared components.
 3. Push your feature branch and open a PR targeting `main`. Describe the change, actual test results, screenshots for visible changes, and remaining dependencies. Use a Draft PR while required checks or dependencies are unresolved.
 4. **Reda reviews and merges approved PRs.** Members address review feedback on their own branches; new pushes update the same PR. Do not push directly to `main` or force-push shared branches.
-
-Current integration priorities: verify foundations; complete real request submission and slot protection; review booking details and SPPI decisions; integrate return evidence; then verify notification triggers across the full flow. Work can proceed in parallel once shared fields, locking order, and integration points are agreed.
 
 <p align="center">
   <sub>BEM UPNVJ · Kabinet Gelora Juang</sub>
