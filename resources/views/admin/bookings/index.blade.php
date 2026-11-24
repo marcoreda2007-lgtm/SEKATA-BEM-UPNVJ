@@ -1,52 +1,49 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Antrean Pengajuan | SEKATA</title>
-    <link rel="stylesheet" href="{{ asset('css/admin-bookings.css') }}">
-</head>
-<body>
-    <div class="container">
-        <p class="identitas">SEKATA - Biro SPPI</p>
+@extends('layouts.app')
 
-        <h1>Antrean Pengajuan</h1>
+@section('title', 'Antrean Pengajuan | SEKATA')
 
-        <p class="deskripsi">
-            Periksa pengajuan peminjaman yang menunggu keputusan.
-        </p>
+@section('content')
+    <h1 class="h3 mb-2">Antrean Pengajuan</h1>
 
-        <table>
-            <caption>Daftar pengajuan berstatus Menunggu</caption>
+    <p class="text-secondary mb-4">
+        Periksa pengajuan peminjaman yang menunggu keputusan.
+    </p>
 
-            <thead>
-                <tr>
-                    <th scope="col">Unit</th>
-                    <th scope="col">Kegiatan</th>
-                    <th scope="col">Status</th>
-                </tr>
-            </thead>
+    <div class="sekata-card p-3">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <caption class="caption-top">
+                    Daftar pengajuan berstatus Menunggu
+                </caption>
 
-            <tbody>
-                @forelse ($bookings as $booking)
+                <thead>
                     <tr>
-                        <td>{{ $booking->user->unit_name }}</td>
-                        <td>{{ $booking->activity_description }}</td>
-                        <td>
-                            <span class="status">
-                                {{ $booking->status }}
-                            </span>
-                        </td>
+                        <th scope="col">Unit</th>
+                        <th scope="col">Kegiatan</th>
+                        <th scope="col">Status</th>
                     </tr>
-                @empty
-                    <tr>
-                        <td colspan="3">
-                            Belum ada pengajuan yang perlu diperiksa.
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
+                </thead>
+
+                <tbody>
+                    @forelse ($bookings as $booking)
+                        <tr>
+                            <td>{{ $booking->user->unit_name }}</td>
+                            <td>{{ $booking->activity_description }}</td>
+                            <td>
+                                <span class="pill-menunggu">
+                                    {{ $booking->status }}
+                                </span>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="3" class="text-center text-secondary py-4">
+                                Belum ada pengajuan yang perlu diperiksa.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
     </div>
-</body>
-</html>
+@endsection
