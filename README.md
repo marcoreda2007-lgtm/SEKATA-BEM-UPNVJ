@@ -24,21 +24,25 @@
 
 SEKATA gives seven fields (*bidang*) and four bureaus (*biro*) one calendar for the BEM secretariat. Units can check availability, submit requests on open slots, and send return evidence. Biro SPPI reviews requests, records decisions with reasons, and verifies the room and key handover.
 
-## Development status
+### Development accounts
 
-Status as of **25 November 2026**. Features under development are not yet available in `main`.
+The seeder creates one room and 11 development accounts. Each seeded account uses `<email-prefix>123` as its default password:
 
-| Feature | Status |
-| --- | --- |
-| Authentication and shared foundations | Available in `main`: login/logout, role middleware, account/room/booking schema, initial accounts, and shared Bootstrap layout. |
-| SPPI queue | Available in `main`: database-backed pending queue with admin-only access. |
-| SPPI decisions | In development: approval/rejection with reasons and direct SPPI bookings. |
-| Calendar and requests | In development: weekly calendar, request submission, and slot availability checks. |
-| Details and history | Under review: owner/admin detail page. Complete status history remains pending. |
-| Return evidence | In development: private two-photo upload, replacement, and SPPI inspection. |
-| Notifications | In development: recipient-specific notices, unread badge, list, and status triggers. |
+| Account | Email | Password | Role |
+| --- | --- | --- | --- |
+| Biro SPPI | `sppi@sekata.test` | `sppi123` | Admin |
+| Bidang Minat dan Bakat | `minatbakat@sekata.test` | `minatbakat123` | Borrower unit |
+| Bidang Sosial dan Politik | `sospol@sekata.test` | `sospol123` | Borrower unit |
+| Bidang Kemahasiswaan | `kemahasiswaan@sekata.test` | `kemahasiswaan123` | Borrower unit |
+| Bidang PPPM | `pppm@sekata.test` | `pppm123` | Borrower unit |
+| Bidang Lingkungan Masyarakat | `lingmas@sekata.test` | `lingmas123` | Borrower unit |
+| Bidang Pengkeima | `pengkeima@sekata.test` | `pengkeima123` | Borrower unit |
+| Bidang Ekraf | `ekraf@sekata.test` | `ekraf123` | Borrower unit |
+| Biro Kesekretariatan | `kesekretariatan@sekata.test` | `kesekretariatan123` | Borrower unit |
+| Biro Kebendaharaan | `kebendaharaan@sekata.test` | `kebendaharaan123` | Borrower unit |
+| Biro Medkominfo | `medkominfo@sekata.test` | `medkominfo123` | Borrower unit |
 
-The full booking and return workflow is not yet ready for operational use.
+To override all seeded passwords at once, set `SEED_USER_PASSWORD` in your local `.env` before seeding. These are development credentials, not credentials for a BEM pilot. Rerunning the seeder updates the seeded accounts, including their passwords; do not run it casually against operational data.
 
 ## Tech stack
 
