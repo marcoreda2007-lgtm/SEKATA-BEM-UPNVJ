@@ -172,4 +172,176 @@ class BookingDetailTest extends TestCase
             ->get('/peminjaman/abc')
             ->assertNotFound();
     }
+    public function test_admin_can_approve_pending_booking(): void
+    {
+        $owner = $this->makeUser();
+
+        $admin = $this->makeUser([
+            'unit_name' => 'Biro SPPI',
+            'role' => 'admin',
+        ]);
+
+        $room = $this->makeRoom();
+        $booking = $this->makeBooking($owner, $room);
+
+        $response = $this->actingAs($admin)
+            ->patch(route('admin.peminjaman.decide', $booking->id), [
+                'status' => 'Disetujui',
+                'decision_reason' => 'Penggunaan sesuai keperluan sekretariat.',
+            ]);
+
+        $response->assertRedirect(
+            route('peminjaman.show', $booking->id)
+        );
+
+        $response->assertSessionHasNoErrors();
+
+        $booking->refresh();
+
+        $this->assertSame('Disetujui', $booking->status);
+
+        $this->assertSame(
+            'Penggunaan sesuai keperluan sekretariat.',
+            $booking->decision_reason
+        );
+
+        $this->assertEquals($admin->id, $booking->decided_by);
+        $this->assertNotNull($booking->decided_at);
+
+        $this->get(route('admin.peminjaman.index'))
+            ->assertOk()
+            ->assertSee('Belum ada pengajuan yang perlu diperiksa.');
+    }
+
+    public function test_admin_can_reject_pending_booking(): void
+    {
+        $owner = $this->makeUser();
+        $admin = $this->makeUser(['role' => 'admin']);
+        $booking = $this->makeBooking($owner, $this->makeRoom());
+
+        $this->actingAs($admin)
+            ->patch(route('admin.peminjaman.decide', $booking->id), [
+                'status' => 'Ditolak',
+                'decision_reason' => 'Keperluan tidak sesuai penggunaan sekretariat.',
+            ])
+            ->assertRedirect(route('peminjaman.show', $booking->id))
+            ->assertSessionHasNoErrors();
+
+        $booking->refresh();
+
+        $this->assertSame('Ditolak', $booking->status);
+        $this->assertSame(
+            'Keperluan tidak sesuai penggunaan sekretariat.',
+            $booking->decision_reason
+        );
+        $this->assertEquals($admin->id, $booking->decided_by);
+        $this->assertNotNull($booking->decided_at);
+
+        $this->get(route('admin.peminjaman.index'))
+            ->assertOk()
+            ->assertSee('Belum ada pengajuan yang perlu diperiksa.');
+    }
+
+    public function test_decision_requires_a_reason(): void
+    {
+        $owner = $this->makeUser();
+        $admin = $this->makeUser(['role' => 'admin']);
+        $booking = $this->makeBooking($owner, $this->makeRoom());
+
+        $this->actingAs($admin)
+            ->patch(route('admin.peminjaman.decide', $booking->id), [
+                'status' => 'Disetujui',
+                'decision_reason' => '',
+            ])
+            ->assertSessionHasErrors('decision_reason');
+
+        $booking->refresh();
+
+        $this->assertSame('Menunggu', $booking->status);
+        $this->assertNull($booking->decided_by);
+        $this->assertNull($booking->decided_at);
+    }
+    public function test_unit_cannot_decide_its_own_booking(): void
+    {
+        $owner = $this->makeUser();
+        $booking = $this->makeBooking($owner, $this->makeRoom());
+
+        $this->actingAs($owner)
+            ->patch(route('admin.peminjaman.decide', $booking->id), [
+                'status' => 'Disetujui',
+                'decision_reason' => 'Mencoba menyetujui pengajuan sendiri.',
+            ])
+            ->assertForbidden();
+
+        $this->assertSame('Menunggu', $booking->fresh()->status);
+    }
+    public function test_processed_booking_cannot_be_decided_again(): void
+    {
+        $owner = $this->makeUser();
+        $admin = $this->makeUser(['role' => 'admin']);
+
+        $booking = $this->makeBooking($owner, $this->makeRoom(), [
+            'status' => 'Disetujui',
+            'decision_reason' => 'Alasan keputusan pertama.',
+            'decided_by' => $admin->id,
+            'decided_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.peminjaman.decide', $booking->id), [
+                'status' => 'Ditolak',
+                'decision_reason' => 'Mencoba mengganti keputusan.',
+            ])
+            ->assertSessionHasErrors('decision');
+
+        $booking->refresh();
+
+        $this->assertSame('Disetujui', $booking->status);
+        $this->assertSame(
+            'Alasan keputusan pertama.',
+            $booking->decision_reason
+        );
+    }
+
+    public function test_admin_can_open_empty_booking_queue(): void
+    {
+        $admin = $this->makeUser(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->get(route('admin.peminjaman.index'))
+            ->assertOk()
+            ->assertSee('Belum ada pengajuan yang perlu diperiksa.');
+    }
+
+    public function test_queue_only_shows_pending_bookings_with_detail_links(): void
+    {
+        $owner = $this->makeUser();
+        $admin = $this->makeUser(['role' => 'admin']);
+        $room = $this->makeRoom();
+
+        $pending = $this->makeBooking($owner, $room, [
+            'activity_description' => 'Pengajuan yang masih menunggu',
+        ]);
+
+        $this->makeBooking($owner, $room, [
+            'status' => 'Disetujui',
+            'activity_description' => 'Pengajuan yang sudah disetujui',
+        ]);
+
+        $this->makeBooking($owner, $room, [
+            'status' => 'Ditolak',
+            'activity_description' => 'Pengajuan yang sudah ditolak',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.peminjaman.index'))
+            ->assertOk()
+            ->assertSee('Pengajuan yang masih menunggu')
+            ->assertSee(
+                'href="' . route('peminjaman.show', $pending->id) . '"',
+                false
+            )
+            ->assertDontSee('Pengajuan yang sudah disetujui')
+            ->assertDontSee('Pengajuan yang sudah ditolak');
+    }
 }
