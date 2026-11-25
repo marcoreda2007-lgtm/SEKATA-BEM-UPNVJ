@@ -6,10 +6,14 @@ use App\Models\Booking;
 use App\Models\BookingProof;
 use App\Models\Room;
 use App\Models\User;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Mockery;
+use RuntimeException;
 use Tests\TestCase;
+use Throwable;
 
 class BookingProofTest extends TestCase
 {
@@ -79,17 +83,22 @@ class BookingProofTest extends TestCase
         $this->assertCount(0, Storage::disk('local')->allFiles());
     }
 
-    public function test_another_unit_cannot_upload_proofs(): void
+    public function test_another_unit_cannot_upload_or_view_the_detail_page(): void
     {
         Storage::fake('local');
 
         $booking = $this->makeBooking($this->makeUser());
+        $other = $this->makeUser();
 
-        $this->actingAs($this->makeUser())
+        $this->actingAs($other)
             ->post(route('peminjaman.bukti.store', $booking), [
                 'ruangan' => $this->fakePhoto('ruangan.png'),
                 'kunci' => $this->fakePhoto('kunci.png'),
             ])
+            ->assertForbidden();
+
+        $this->actingAs($other)
+            ->get(route('peminjaman.show', $booking->id))
             ->assertForbidden();
 
         $this->assertDatabaseCount('booking_proofs', 0);
@@ -158,7 +167,61 @@ class BookingProofTest extends TestCase
         $this->assertCount(0, Storage::disk('local')->allFiles());
     }
 
-    public function test_sppi_can_request_one_replacement_then_finish_the_inspection(): void
+    public function test_detail_page_shows_upload_form_for_owner_when_approved(): void
+    {
+        Storage::fake('local');
+
+        $owner = $this->makeUser();
+        $booking = $this->makeBooking($owner);
+
+        $this->actingAs($owner)
+            ->get(route('peminjaman.show', $booking->id))
+            ->assertOk()
+            ->assertSee('Bukti Pengembalian Sekretariat')
+            ->assertSee('name="ruangan"', false)
+            ->assertSee('name="kunci"', false)
+            ->assertSee('Kirim bukti')
+            ->assertDontSee('Simpan hasil pemeriksaan');
+    }
+
+    public function test_detail_page_shows_inspection_form_for_admin_when_under_review(): void
+    {
+        Storage::fake('local');
+
+        $owner = $this->makeUser();
+        $booking = $this->makeBooking($owner, 'Periksa Bukti');
+        $this->makeProof($booking, 'ruangan');
+        $this->makeProof($booking, 'kunci');
+
+        $this->actingAs($this->makeUser(role: 'admin'))
+            ->get(route('peminjaman.show', $booking->id))
+            ->assertOk()
+            ->assertSee('Simpan hasil pemeriksaan')
+            ->assertSee('name="decision"', false)
+            ->assertSee('name="requested_category"', false)
+            ->assertDontSee('Kirim bukti pengganti');
+    }
+
+    public function test_detail_page_shows_sppi_note_and_single_replacement_form_to_owner(): void
+    {
+        Storage::fake('local');
+
+        $owner = $this->makeUser();
+        $booking = $this->makeBooking($owner, 'Perlu Perbaikan');
+        $booking->update(['inspection_note' => 'Foto kunci masih blur.']);
+        $this->makeProof($booking, 'ruangan', requiresReplacement: true);
+        $this->makeProof($booking, 'kunci');
+
+        $this->actingAs($owner)
+            ->get(route('peminjaman.show', $booking->id))
+            ->assertOk()
+            ->assertSee('Catatan SPPI: Foto kunci masih blur.')
+            ->assertSee('Kirim foto pengganti')
+            ->assertSee('name="category"', false)
+            ->assertDontSee('name="kunci"', false);
+    }
+
+    public function test_full_flow_through_the_detail_page_keeps_the_unrequested_photo(): void
     {
         Storage::fake('local');
 
@@ -179,6 +242,13 @@ class BookingProofTest extends TestCase
             ->where('category', 'ruangan')
             ->value('path');
 
+        $this->actingAs($owner)
+            ->get(route('peminjaman.show', $booking->id))
+            ->assertOk()
+            ->assertSee("/peminjaman/{$booking->id}/bukti/ruangan")
+            ->assertSee("/peminjaman/{$booking->id}/bukti/kunci")
+            ->assertDontSee('Kirim bukti');
+
         $this->from("/admin/peminjaman/{$booking->id}")
             ->actingAs($admin)
             ->post(route('admin.peminjaman.pemeriksaan.store', $booking), [
@@ -197,6 +267,12 @@ class BookingProofTest extends TestCase
             'category' => 'kunci',
             'requires_replacement' => true,
         ]);
+
+        $this->actingAs($owner)
+            ->get(route('peminjaman.show', $booking->id))
+            ->assertOk()
+            ->assertSee('Catatan SPPI: Foto kunci belum terlihat jelas.')
+            ->assertSee('Kirim foto pengganti');
 
         $this->from("/peminjaman/{$booking->id}")
             ->actingAs($owner)
@@ -222,6 +298,7 @@ class BookingProofTest extends TestCase
                 ->where('category', 'ruangan')
                 ->value('path'),
         );
+        Storage::disk('local')->assertExists($ruanganPath);
 
         $this->from("/admin/peminjaman/{$booking->id}")
             ->actingAs($admin)
@@ -234,6 +311,12 @@ class BookingProofTest extends TestCase
             'id' => $booking->id,
             'status' => 'Selesai',
         ]);
+
+        $this->actingAs($owner)
+            ->get(route('peminjaman.show', $booking->id))
+            ->assertOk()
+            ->assertSee('Selesai')
+            ->assertDontSee('Kirim foto pengganti');
     }
 
     public function test_replacement_of_a_category_not_requested_is_rejected(): void
@@ -288,32 +371,80 @@ class BookingProofTest extends TestCase
         Storage::disk('local')->assertExists($kunci->path);
     }
 
-    public function test_proof_partial_renders_for_owner_and_admin(): void
+    public function test_transaction_failure_cleans_up_new_files(): void
     {
         Storage::fake('local');
 
         $owner = $this->makeUser();
         $booking = $this->makeBooking($owner);
+
+        // Gagal di akhir transaksi, setelah kedua file selesai ditulis.
+        Booking::updating(function (): void {
+            throw new RuntimeException('forced database failure');
+        });
+
+        try {
+            $this->actingAs($owner)->post(route('peminjaman.bukti.store', $booking), [
+                'ruangan' => $this->fakePhoto('ruangan.png'),
+                'kunci' => $this->fakePhoto('kunci.png'),
+            ]);
+        } catch (Throwable) {
+            // Kegagalan yang dipaksakan memang dilempar ulang oleh controller.
+        } finally {
+            Booking::flushEventListeners();
+        }
+
+        $this->assertCount(0, Storage::disk('local')->allFiles());
+        $this->assertDatabaseCount('booking_proofs', 0);
+        $this->assertDatabaseHas('bookings', [
+            'id' => $booking->id,
+            'status' => 'Disetujui',
+        ]);
+    }
+
+    public function test_old_file_delete_failure_after_commit_keeps_the_new_file(): void
+    {
+        $owner = $this->makeUser();
+        $booking = $this->makeBooking($owner, 'Perlu Perbaikan');
         $this->makeProof($booking, 'ruangan');
-        $this->makeProof($booking, 'kunci');
+        $kunci = $this->makeProof($booking, 'kunci', requiresReplacement: true);
 
-        $this->actingAs($owner);
-        $this->withViewErrors([]);
-        $ownerHtml = view('peminjaman.partials.proofs', ['booking' => $booking->fresh()])->render();
+        $newPath = "booking-proofs/{$booking->id}/kunci-baru.png";
+        $deleted = [];
 
-        $this->assertStringContainsString('Bukti Pengembalian Sekretariat', $ownerHtml);
-        $this->assertStringContainsString('Kirim bukti', $ownerHtml);
-        $this->assertStringContainsString('bukan waktu foto diambil', $ownerHtml);
-        $this->assertStringNotContainsString('Simpan hasil pemeriksaan', $ownerHtml);
+        $disk = Mockery::mock(Filesystem::class);
+        $disk->shouldReceive('putFile')->once()->andReturn($newPath);
+        $disk->shouldReceive('delete')->andReturnUsing(function ($path) use (&$deleted, $kunci) {
+            $deleted[] = $path;
 
-        $booking->update(['status' => 'Periksa Bukti']);
+            if ($path === $kunci->path) {
+                throw new RuntimeException('disk cleanup failed');
+            }
 
-        $this->actingAs($this->makeUser(role: 'admin'));
-        $this->withViewErrors([]);
-        $adminHtml = view('peminjaman.partials.proofs', ['booking' => $booking->fresh()])->render();
+            return true;
+        });
 
-        $this->assertStringContainsString('Simpan hasil pemeriksaan', $adminHtml);
-        $this->assertStringNotContainsString('Kirim bukti', $adminHtml);
+        Storage::shouldReceive('disk')->andReturn($disk);
+
+        $this->from("/peminjaman/{$booking->id}")
+            ->actingAs($owner)
+            ->post(route('peminjaman.bukti.store', $booking), [
+                'category' => 'kunci',
+                'kunci' => $this->fakePhoto('kunci-baru.png'),
+            ])
+            ->assertSessionHasNoErrors();
+
+        // Hanya file lama yang dicoba dihapus; file baru tidak pernah ikut terhapus.
+        $this->assertSame([$kunci->path], $deleted);
+        $this->assertDatabaseHas('bookings', [
+            'id' => $booking->id,
+            'status' => 'Periksa Bukti',
+        ]);
+        $this->assertDatabaseHas('booking_proofs', [
+            'booking_id' => $booking->id,
+            'category' => 'kunci',
+            'path' => $newPath,
+        ]);
     }
 
     // 1x1 PNG asli; UploadedFile::fake()->image() butuh ekstensi GD yang tidak terpasang di sini.

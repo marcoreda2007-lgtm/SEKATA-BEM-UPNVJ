@@ -40,25 +40,13 @@
         @endforeach
     </div>
 
-    @if ($isOwner && $booking->status === 'Disetujui')
-        <form method="POST" action="{{ route('peminjaman.bukti.store', $booking) }}" enctype="multipart/form-data">
-            @csrf
-            @foreach ($labels as $category => $label)
-                <div class="mb-2">
-                    <label for="bukti-{{ $category }}" class="form-label small fw-semibold">{{ $label }}</label>
-                    <input id="bukti-{{ $category }}" type="file" name="{{ $category }}"
-                           accept="image/jpeg,image/png"
-                           class="form-control form-control-sm @error($category) is-invalid @enderror">
-                    @error($category)
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                </div>
-            @endforeach
-            <button type="submit" class="btn btn-sekata-primary btn-sm">Kirim bukti</button>
-        </form>
-    @endif
-
     @if ($isOwner && $booking->status === 'Perlu Perbaikan')
+        @if (filled($booking->inspection_note))
+            <div class="alert alert-warning py-2 small mb-3">
+                Catatan SPPI: {{ $booking->inspection_note }}
+            </div>
+        @endif
+
         @if ($requested)
             <form method="POST" action="{{ route('peminjaman.bukti.store', $booking) }}" enctype="multipart/form-data">
                 @csrf
@@ -77,6 +65,9 @@
                 @error('category')
                     <div class="alert alert-danger py-2 small">{{ $message }}</div>
                 @enderror
+                @error('file')
+                    <div class="alert alert-danger py-2 small">{{ $message }}</div>
+                @enderror
                 <button type="submit" class="btn btn-sekata-primary btn-sm">Kirim foto pengganti</button>
             </form>
         @else
@@ -84,24 +75,62 @@
         @endif
     @endif
 
+    @if ($isOwner && $booking->status === 'Disetujui')
+        <form method="POST" action="{{ route('peminjaman.bukti.store', $booking) }}" enctype="multipart/form-data">
+            @csrf
+            @foreach ($labels as $category => $label)
+                <div class="mb-2">
+                    <label for="bukti-{{ $category }}" class="form-label small fw-semibold">{{ $label }}</label>
+                    <input id="bukti-{{ $category }}" type="file" name="{{ $category }}"
+                           accept="image/jpeg,image/png"
+                           class="form-control form-control-sm @error($category) is-invalid @enderror">
+                    @error($category)
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
+            @endforeach
+            @error('booking')
+                <div class="alert alert-danger py-2 small">{{ $message }}</div>
+            @enderror
+            @error('file')
+                <div class="alert alert-danger py-2 small">{{ $message }}</div>
+            @enderror
+            <button type="submit" class="btn btn-sekata-primary btn-sm">Kirim bukti</button>
+        </form>
+    @endif
+
     @if ($isAdmin && $booking->status === 'Periksa Bukti')
         <form method="POST" action="{{ route('admin.peminjaman.pemeriksaan.store', $booking) }}">
             @csrf
             <div class="mb-2">
                 <label for="keputusan-bukti" class="form-label small fw-semibold">Keputusan pemeriksaan</label>
-                <select id="keputusan-bukti" name="decision" class="form-select form-select-sm" required>
-                    <option value="selesai">Selesai — kedua bukti diterima</option>
-                    <option value="perbaikan">Minta perbaikan satu foto</option>
+                <select id="keputusan-bukti" name="decision"
+                        class="form-select form-select-sm @error('decision') is-invalid @enderror" required>
+                    <option value="selesai" @selected(old('decision', 'selesai') === 'selesai')>
+                        Selesai - kedua bukti diterima
+                    </option>
+                    <option value="perbaikan" @selected(old('decision') === 'perbaikan')>
+                        Minta perbaikan satu foto
+                    </option>
                 </select>
+                @error('decision')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
             </div>
             <div class="mb-2">
                 <label for="kategori-perbaikan" class="form-label small fw-semibold">Kategori yang diperbaiki</label>
-                <select id="kategori-perbaikan" name="requested_category" class="form-select form-select-sm">
-                    <option value="">— hanya untuk permintaan perbaikan —</option>
+                <select id="kategori-perbaikan" name="requested_category"
+                        class="form-select form-select-sm @error('requested_category') is-invalid @enderror">
+                    <option value="">- hanya untuk permintaan perbaikan -</option>
                     @foreach ($labels as $category => $label)
-                        <option value="{{ $category }}">{{ $label }}</option>
+                        <option value="{{ $category }}" @selected(old('requested_category') === $category)>
+                            {{ $label }}
+                        </option>
                     @endforeach
                 </select>
+                @error('requested_category')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
             </div>
             <div class="mb-2">
                 <label for="catatan-pemeriksaan" class="form-label small fw-semibold">Catatan pemeriksaan</label>
@@ -112,6 +141,9 @@
                 @enderror
             </div>
             @error('booking')
+                <div class="alert alert-danger py-2 small">{{ $message }}</div>
+            @enderror
+            @error('file')
                 <div class="alert alert-danger py-2 small">{{ $message }}</div>
             @enderror
             <button type="submit" class="btn btn-sekata-primary btn-sm">Simpan hasil pemeriksaan</button>

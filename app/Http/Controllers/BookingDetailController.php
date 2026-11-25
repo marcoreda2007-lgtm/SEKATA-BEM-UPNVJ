@@ -11,7 +11,7 @@ class BookingDetailController extends Controller
 {
     public function show(Request $request, int $id): View
     {
-        $booking = Booking::with(['user', 'room', 'decider'])->findOrFail($id);
+        $booking = Booking::with(['user', 'room', 'decider', 'proofs'])->findOrFail($id);
 
         $currentUser = $request->user();
 

@@ -31,9 +31,10 @@ class BookingProofController extends Controller
 
         $storedPaths = [];
         $replaced = false;
+        $oldPathToDelete = null;
 
         try {
-            DB::transaction(function () use ($request, $booking, &$storedPaths, &$replaced): void {
+            DB::transaction(function () use ($request, $booking, &$storedPaths, &$replaced, &$oldPathToDelete): void {
                 // Modul ini tidak menyentuh rooms, jadi cukup booking yang dikunci.
                 // Urutan rooms -> booking milik Reda/Nabil tidak dilanggar.
                 $locked = Booking::query()->lockForUpdate()->findOrFail($booking->id);
@@ -45,7 +46,7 @@ class BookingProofController extends Controller
                 }
 
                 if ($locked->status === 'Perlu Perbaikan') {
-                    $this->replaceRequestedProof($locked, $request, $storedPaths);
+                    $oldPathToDelete = $this->replaceRequestedProof($locked, $request, $storedPaths);
                     $replaced = true;
 
                     return;
@@ -56,10 +57,20 @@ class BookingProofController extends Controller
                 ]);
             });
         } catch (Throwable $exception) {
-            // File baru dibersihkan; file lama hanya dihapus setelah penggantian tersimpan.
+            // File baru dibersihkan; file lama belum disentuh karena penggantian gagal.
             Storage::disk('local')->delete($storedPaths);
 
             throw $exception;
+        }
+
+        // Transaksi sudah commit. Kegagalan membersihkan file lama dicatat, tetapi
+        // tidak boleh membatalkan file baru dan baris database yang sudah tersimpan.
+        if ($oldPathToDelete !== null) {
+            try {
+                Storage::disk('local')->delete($oldPathToDelete);
+            } catch (Throwable $exception) {
+                report($exception);
+            }
         }
 
         return back()->with('success', $replaced
@@ -175,8 +186,9 @@ class BookingProofController extends Controller
 
     /**
      * @param  array<int, string>  $storedPaths
+     * @return string Path file lama yang boleh dihapus setelah commit.
      */
-    private function replaceRequestedProof(Booking $booking, Request $request, array &$storedPaths): void
+    private function replaceRequestedProof(Booking $booking, Request $request, array &$storedPaths): string
     {
         $category = $request->input('category');
         $file = in_array($category, self::CATEGORIES, true) ? $request->file($category) : null;
@@ -209,8 +221,7 @@ class BookingProofController extends Controller
             'inspection_note' => null,
         ]);
 
-        // File lama baru dihapus setelah penggantian tersimpan.
-        DB::afterCommit(fn () => Storage::disk('local')->delete($oldPath));
+        return $oldPath;
     }
 
     /**
