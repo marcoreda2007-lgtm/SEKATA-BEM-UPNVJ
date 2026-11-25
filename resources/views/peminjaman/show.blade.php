@@ -3,85 +3,12 @@
 @section('title', 'Detail Peminjaman #' . $booking->id . ' · SEKATA')
 
 @push('styles')
-<style>
-    .pill-ditolak {
-        background-color: #FDECEC;
-        color: #9E2A2B;
-        border-radius: 999px;
-        padding: 4px 12px;
-        font-size: 12px;
-        font-weight: 600;
-    }
-    .pill-periksa {
-        background-color: #E6F0FA;
-        color: #1D4ED8;
-        border-radius: 999px;
-        padding: 4px 12px;
-        font-size: 12px;
-        font-weight: 600;
-    }
-    .pill-selesai {
-        background-color: #E8ECEA;
-        color: #2E4239;
-        border-radius: 999px;
-        padding: 4px 12px;
-        font-size: 12px;
-        font-weight: 600;
-    }
-    .detail-label {
-        font-size: 12px;
-        color: var(--muted);
-        margin-bottom: 2px;
-    }
-    .detail-box {
-        background-color: #F7FAF8;
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        padding: 12px 14px;
-        font-size: 14px;
-    }
-    .timeline-item {
-        position: relative;
-        padding-left: 20px;
-        border-left: 2px solid var(--line);
-        padding-bottom: 18px;
-    }
-    .timeline-item:last-child {
-        padding-bottom: 0;
-        border-left-color: transparent;
-    }
-    .timeline-dot {
-        position: absolute;
-        left: -6px;
-        top: 4px;
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background-color: var(--hijau-gelap);
-    }
-    .timeline-dot.kuning {
-        background-color: #EAB308;
-    }
-    .timeline-dot.hijau {
-        background-color: var(--hijau-bem);
-    }
-    .timeline-dot.merah {
-        background-color: #DC2626;
-    }
-    .proof-slot {
-        border: 1px dashed #C5D3CB;
-        background-color: #F7FAF8;
-        border-radius: 8px;
-        padding: 14px;
-        font-size: 13px;
-        color: var(--muted);
-    }
-</style>
+    <link rel="stylesheet" href="{{ asset('css/booking-detail.css') }}">
 @endpush
 
 @section('content')
 @php
-    $pillClass = match($booking->status) {
+    $pillClass = match ($booking->status) {
         'Disetujui' => 'pill-disetujui',
         'Menunggu' => 'pill-menunggu',
         'Perlu Perbaikan' => 'pill-perbaikan',
@@ -90,18 +17,39 @@
         'Selesai' => 'pill-selesai',
         default => 'pill-menunggu',
     };
+
+    $currentStatusDot = match ($booking->status) {
+        'Disetujui', 'Selesai' => 'status-record-dot--hijau',
+        'Menunggu', 'Periksa Bukti' => 'status-record-dot--kuning',
+        'Ditolak', 'Perlu Perbaikan' => 'status-record-dot--merah',
+        default => 'status-record-dot--netral',
+    };
+
+    // Label keputusan hanya disebut Disetujui/Ditolak jika status saat ini
+    // memang mencerminkan keputusan tersebut; selain itu tampilkan netral.
+    $decisionLabel = match ($booking->status) {
+        'Disetujui' => 'Disetujui',
+        'Ditolak' => 'Ditolak',
+        default => 'Keputusan SPPI tercatat',
+    };
+
+    $decisionDot = match ($booking->status) {
+        'Disetujui' => 'status-record-dot--hijau',
+        'Ditolak' => 'status-record-dot--merah',
+        default => 'status-record-dot--netral',
+    };
 @endphp
 
 {{-- Header Halaman --}}
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
     <div>
-        <div class="text-uppercase fw-semibold" style="font-size: 11px; letter-spacing: 0.05em; color: var(--muted);">
+        <div class="text-uppercase fw-semibold detail-eyebrow">
             Pengajuan #{{ $booking->id }}
         </div>
         <h1 class="h4 fw-bold mb-0">Detail Peminjaman Sekretariat</h1>
     </div>
 
-    <a href="{{ auth()->user()->isAdmin() ? url('/admin/peminjaman') : url('/jadwal') }}" class="btn btn-sekata-secondary">
+    <a href="{{ auth()->user()->isAdmin() ? route('admin.peminjaman.index') : route('jadwal.index') }}" class="btn btn-sekata-secondary">
         ← Kembali
     </a>
 </div>
@@ -113,179 +61,173 @@
         <div class="sekata-card p-3 p-md-4 mb-3">
             <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 pb-3 mb-3 border-bottom">
                 <div>
-                    <div class="fw-bold" style="font-size: 18px;">{{ $booking->user->unit_name }}</div>
-                    <div style="font-size: 13px; color: var(--muted);">
-                        Diajukan {{ $booking->created_at?->format('d M Y, H:i') }} WIB
+                    <div class="fw-bold detail-unit-title">{{ $booking->user?->unit_name ?? '-' }}</div>
+                    <div class="detail-meta">
+                        @if($createdAtWib)
+                            Diajukan {{ $createdAtWib }}
+                        @else
+                            Waktu pengajuan belum tercatat
+                        @endif
                     </div>
                 </div>
                 <span class="{{ $pillClass }}">{{ $booking->status }}</span>
             </div>
 
-            <div class="row g-3" style="font-size: 14px;">
+            <div class="row g-3 small">
                 <div class="col-12 col-sm-6">
                     <div class="detail-label">Ruangan</div>
-                    <div class="fw-semibold">{{ $booking->room->name }}</div>
+                    <div class="fw-semibold fs-6">{{ $booking->room?->name ?? '-' }}</div>
                 </div>
                 <div class="col-12 col-sm-6">
                     <div class="detail-label">Tanggal & Jam Penggunaan</div>
-                    <div class="fw-semibold">
-                        {{ $booking->tanggal->format('d M Y') }},
-                        {{ substr($booking->start_time, 0, 5) }}–{{ substr($booking->end_time, 0, 5) }} WIB
+                    <div class="fw-semibold fs-6">
+                        {{ $booking->tanggal?->format('d M Y') ?? '-' }},
+                        {{ substr((string) $booking->start_time, 0, 5) }}–{{ substr((string) $booking->end_time, 0, 5) }} WIB
                     </div>
                 </div>
                 <div class="col-12 col-sm-6">
                     <div class="detail-label">Nama PIC</div>
-                    <div class="fw-semibold">{{ $booking->pic_name }}</div>
+                    <div class="fw-semibold fs-6">{{ $booking->pic_name }}</div>
                 </div>
                 <div class="col-12 col-sm-6">
                     <div class="detail-label">Divisi PIC</div>
-                    <div class="fw-semibold">{{ $booking->pic_division }}</div>
+                    <div class="fw-semibold fs-6">{{ $booking->pic_division }}</div>
                 </div>
                 <div class="col-12">
                     <div class="detail-label">Deskripsi Kegiatan</div>
-                    <div class="detail-box mt-1" style="white-space: pre-line;">{{ $booking->activity_description }}</div>
+                    <div class="detail-box detail-box--pre mt-1">{{ $booking->activity_description }}</div>
                 </div>
             </div>
         </div>
 
-        {{-- Kartu Keputusan SPPI & Catatan Inspeksi --}}
+        {{-- Kartu Keputusan SPPI & Catatan Pemeriksaan --}}
         <div class="sekata-card p-3 p-md-4 mb-3">
             <h2 class="h6 fw-bold mb-3">Keputusan SPPI & Catatan Pemeriksaan</h2>
 
             <div class="mb-3">
-                <div class="detail-label">Alasan Keputusan SPPI</div>
-                @if($booking->decision_reason)
+                <div class="detail-label">Keputusan SPPI</div>
+                @if($hasDecisionData)
                     <div class="detail-box mt-1">
-                        <div>{{ $booking->decision_reason }}</div>
-                        @if($booking->decider || $booking->decided_at)
-                            <div class="mt-2" style="font-size: 12px; color: var(--muted);">
-                                Oleh {{ $booking->decider?->unit_name ?? 'Admin Biro SPPI' }}
-                                @if($booking->decided_at)
-                                    · {{ $booking->decided_at->format('d M Y, H:i') }} WIB
+                        <div>
+                            {{ filled($booking->decision_reason) ? $booking->decision_reason : 'Keputusan tercatat tanpa alasan tertulis.' }}
+                        </div>
+                        @if($booking->decider || $decidedAtWib)
+                            <div class="detail-meta-sm mt-2">
+                                @if($booking->decider)
+                                    Oleh {{ $booking->decider->unit_name }}
+                                @endif
+                                @if($booking->decider && $decidedAtWib)
+                                    ·
+                                @endif
+                                @if($decidedAtWib)
+                                    {{ $decidedAtWib }}
                                 @endif
                             </div>
                         @endif
                     </div>
                 @else
-                    <div class="mt-1" style="font-size: 13px; color: var(--muted);">Belum ada alasan keputusan dari SPPI.</div>
+                    <div class="detail-meta mt-1">Data keputusan SPPI belum tercatat.</div>
                 @endif
             </div>
 
             <div>
                 <div class="detail-label">Catatan Pemeriksaan Bukti Pengembalian</div>
-                @if($booking->inspection_note)
-                    <div class="detail-box mt-1">{{ $booking->inspection_note }}</div>
+                @if(filled($booking->inspection_note))
+                    <div class="detail-box detail-box--pre mt-1">{{ $booking->inspection_note }}</div>
                 @else
-                    <div class="mt-1" style="font-size: 13px; color: var(--muted);">Belum ada catatan pemeriksaan bukti.</div>
+                    <div class="detail-meta mt-1">Belum ada catatan pemeriksaan bukti.</div>
                 @endif
             </div>
         </div>
 
-        {{-- Kartu Status Bukti Pengembalian --}}
+        {{-- Kartu Bukti Pengembalian Sekretariat --}}
         <div class="sekata-card p-3 p-md-4">
-                <h2 class="h6 fw-bold mb-0">Bukti Pengembalian Sekretariat</h2>
+            <h2 class="h6 fw-bold mb-2">Bukti Pengembalian Sekretariat</h2>
+            <p class="detail-meta mb-3">
+                Tampilan foto bukti pengembalian belum terintegrasi pada halaman ini dan akan disambungkan dengan modul bukti pengembalian.
+            </p>
 
             <div class="row g-2">
                 <div class="col-12 col-sm-6">
-                    <div class="proof-slot">
+                    <div class="proof-placeholder">
                         <div class="fw-semibold text-dark mb-1">1. Foto Kondisi Ruangan</div>
-                        <div>.</div>
+                        <div>Belum terintegrasi.</div>
                     </div>
                 </div>
                 <div class="col-12 col-sm-6">
-                    <div class="proof-slot">
+                    <div class="proof-placeholder">
                         <div class="fw-semibold text-dark mb-1">2. Foto Pengembalian Kunci</div>
-                        <div>.</div>
+                        <div>Belum terintegrasi.</div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    {{-- Kolom Kanan: Riwayat Status --}}
+    {{-- Kolom Kanan: Ringkasan Status & Pencatatan --}}
     <div class="col-12 col-lg-5">
         <div class="sekata-card p-3 p-md-4">
-            <h2 class="h6 fw-bold mb-0">Riwayat Status</h2>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-1 mb-3">
+                <h2 class="h6 fw-bold mb-0">Informasi Status & Pencatatan</h2>
+                <span class="detail-meta-sm">Data tersimpan</span>
+            </div>
 
             <div class="mt-2">
-                {{-- 1. Pengajuan dibuat oleh unit --}}
-                <div class="timeline-item">
-                    <span class="timeline-dot"></span>
+                {{-- 1. Pengajuan tercatat --}}
+                <div class="status-record-item">
+                    <span class="status-record-dot"></span>
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-1">
-                        <span class="fw-semibold" style="font-size: 13px;">Pengajuan dibuat</span>
-                        <span style="font-size: 11px; color: var(--muted);">
-                            {{ $booking->created_at?->format('d M Y, H:i') }} WIB
-                        </span>
+                        <span class="fw-semibold small">Pengajuan dibuat</span>
+                        <span class="detail-meta-sm">{{ $createdAtWib ?? 'Waktu belum tercatat' }}</span>
                     </div>
-                    <div style="font-size: 12px; color: var(--muted);">
-                        Oleh: {{ $booking->user->unit_name }}
+                    <div class="detail-meta-sm">
+                        Oleh: {{ $booking->user?->unit_name ?? '-' }}
                     </div>
                 </div>
 
-                {{-- 2. Status Menunggu --}}
-                <div class="timeline-item">
-                    <span class="timeline-dot kuning"></span>
-                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-1">
-                        <span class="fw-semibold" style="font-size: 13px;">Menunggu</span>
-                        <span style="font-size: 11px; color: var(--muted);">
-                            {{ $booking->created_at?->format('d M Y, H:i') }} WIB
-                        </span>
-                    </div>
-                </div>
-
-                {{-- 3. Keputusan SPPI --}}
-                @if($booking->decided_at || $booking->decision_reason || $booking->status !== 'Menunggu')
-                    @php
-                        $isDitolak = $booking->status === 'Ditolak';
-                        $decisionLabel = $isDitolak ? 'Ditolak' : 'Disetujui';
-                        $decisionDot = $isDitolak ? 'merah' : 'hijau';
-                    @endphp
-                    <div class="timeline-item">
-                        <span class="timeline-dot {{ $decisionDot }}"></span>
+                {{-- 2. Keputusan SPPI (hanya berdasarkan data keputusan yang benar-benar tercatat) --}}
+                <div class="status-record-item">
+                    <span class="status-record-dot {{ $hasDecisionData ? $decisionDot : 'status-record-dot--netral' }}"></span>
+                    @if($hasDecisionData)
                         <div class="d-flex flex-wrap justify-content-between align-items-center gap-1">
-                            <span class="fw-semibold" style="font-size: 13px;">{{ $decisionLabel }}</span>
-                            @if($booking->decided_at)
-                                <span style="font-size: 11px; color: var(--muted);">
-                                    {{ $booking->decided_at->format('d M Y, H:i') }} WIB
-                                </span>
-                            @endif
+                            <span class="fw-semibold small">{{ $decisionLabel }}</span>
+                            <span class="detail-meta-sm">{{ $decidedAtWib ?? 'Waktu keputusan belum tercatat' }}</span>
                         </div>
-                        <div style="font-size: 12px; color: var(--muted);">
-                            Oleh: {{ $booking->decider?->unit_name ?? 'Admin Biro SPPI' }}
-                        </div>
-                        @if($booking->decision_reason)
-                            <div class="detail-box mt-2" style="font-size: 13px; padding: 8px 10px;">
+                        @if($booking->decider)
+                            <div class="detail-meta-sm">
+                                Oleh: {{ $booking->decider->unit_name }}
+                            </div>
+                        @endif
+                        @if(filled($booking->decision_reason))
+                            <div class="detail-box detail-box--compact mt-2">
                                 {{ $booking->decision_reason }}
                             </div>
                         @endif
-                    </div>
-                @endif
+                    @else
+                        <div class="fw-semibold small">Keputusan SPPI</div>
+                        <div class="detail-meta-sm">Data keputusan belum tercatat.</div>
+                    @endif
+                </div>
 
-                {{-- 4. Status lanjutan pengembalian bukti --}}
-                @if(in_array($booking->status, ['Periksa Bukti', 'Perlu Perbaikan', 'Selesai']))
-                    @php
-                        $proofDot = match($booking->status) {
-                            'Periksa Bukti' => 'kuning',
-                            'Perlu Perbaikan' => 'merah',
-                            'Selesai' => 'hijau',
-                            default => 'hijau',
-                        };
-                    @endphp
-                    <div class="timeline-item">
-                        <span class="timeline-dot {{ $proofDot }}"></span>
-                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-1">
-                            <span class="fw-semibold" style="font-size: 13px;">{{ $booking->status }}</span>
-                            <span style="font-size: 11px; color: var(--muted);">
-                                {{ $booking->updated_at?->format('d M Y, H:i') }} WIB
-                            </span>
-                        </div>
-                        @if($booking->inspection_note)
-                            <div class="detail-box mt-2" style="font-size: 13px; padding: 8px 10px;">
-                                {{ $booking->inspection_note }}
-                            </div>
-                        @endif
+                {{-- 3. Status saat ini & pembaruan data terakhir --}}
+                <div class="status-record-item">
+                    <span class="status-record-dot {{ $currentStatusDot }}"></span>
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-1">
+                        <span class="fw-semibold small">Status saat ini: {{ $booking->status }}</span>
                     </div>
-                @endif
+                    <div class="detail-meta-sm">
+                        Pembaruan data terakhir: {{ $updatedAtWib ?? 'Belum tercatat' }}
+                    </div>
+                    @if(filled($booking->inspection_note))
+                        <div class="detail-box detail-box--compact detail-box--pre mt-2">
+                            {{ $booking->inspection_note }}
+                        </div>
+                    @endif
+                </div>
+            </div>
+
+            <div class="detail-notice mt-3">
+                Panel ini hanya menampilkan data yang tersimpan saat ini. Waktu pembaruan terakhir menunjukkan perubahan data terbaru, bukan waktu setiap perpindahan status. Riwayat status lengkap per tahap belum tersedia.
             </div>
         </div>
     </div>
