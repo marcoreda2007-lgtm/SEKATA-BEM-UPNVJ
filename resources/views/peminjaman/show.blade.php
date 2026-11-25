@@ -194,28 +194,7 @@
             </div>
 
             {{-- Kartu Bukti Pengembalian Sekretariat --}}
-            <div class="sekata-card p-3 p-md-4">
-                <h2 class="h6 fw-bold mb-2">Bukti Pengembalian Sekretariat</h2>
-                <p class="detail-meta mb-3">
-                    Tampilan foto bukti pengembalian belum terintegrasi pada halaman ini dan akan disambungkan dengan modul
-                    bukti pengembalian.
-                </p>
-
-                <div class="row g-2">
-                    <div class="col-12 col-sm-6">
-                        <div class="proof-placeholder">
-                            <div class="fw-semibold text-dark mb-1">1. Foto Kondisi Ruangan</div>
-                            <div>Belum terintegrasi.</div>
-                        </div>
-                    </div>
-                    <div class="col-12 col-sm-6">
-                        <div class="proof-placeholder">
-                            <div class="fw-semibold text-dark mb-1">2. Foto Pengembalian Kunci</div>
-                            <div>Belum terintegrasi.</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            @include('peminjaman.partials.proofs', ['booking' => $booking])
         </div>
 
         {{-- Kolom Kanan: Ringkasan Status & Pencatatan --}}
