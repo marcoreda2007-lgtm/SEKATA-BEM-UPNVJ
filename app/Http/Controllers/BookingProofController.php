@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Booking;
 use App\Models\BookingProof;
+use App\Services\NotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -21,45 +22,49 @@ class BookingProofController extends Controller
     {
         $this->ensureOwner($request, $booking);
 
-        if ($booking->status === 'Disetujui') {
-            $validated = $request->validate([
-                'ruangan' => ['required', 'file', 'image', 'mimes:jpg,jpeg,png', 'max:5120'],
-                'kunci' => ['required', 'file', 'image', 'mimes:jpg,jpeg,png', 'max:5120'],
-            ]);
-
-            $this->storeInitialProofs($booking, $validated);
-
-            return back()->with('success', 'Bukti pengembalian berhasil dikirim untuk diperiksa SPPI.');
-        }
-
-        if ($booking->status === 'Perlu Perbaikan') {
-            $category = $request->validate([
-                'category' => ['required', 'in:ruangan,kunci'],
-            ])['category'];
-
-            $proof = $booking->proofs()
-                ->where('category', $category)
-                ->where('requires_replacement', true)
-                ->first();
-
-            if (! $proof) {
-                throw ValidationException::withMessages([
-                    'category' => 'Foto ini tidak diminta untuk diperbaiki.',
-                ]);
-            }
-
-            $validated = $request->validate([
-                $category => ['required', 'file', 'image', 'mimes:jpg,jpeg,png', 'max:5120'],
-            ]);
-
-            $this->replaceProof($booking, $proof, $validated[$category]);
-
-            return back()->with('success', 'Foto pengganti berhasil dikirim untuk diperiksa kembali.');
-        }
-
-        throw ValidationException::withMessages([
-            'booking' => 'Bukti hanya dapat dikirim saat peminjaman berstatus Disetujui atau Perlu Perbaikan.',
+        // Bentuk file divalidasi sebelum apa pun disimpan, untuk kedua alur.
+        $request->validate([
+            'ruangan' => ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png', 'max:5120'],
+            'kunci' => ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png', 'max:5120'],
+            'category' => ['nullable', 'in:ruangan,kunci'],
         ]);
+
+        $storedPaths = [];
+        $replaced = false;
+
+        try {
+            DB::transaction(function () use ($request, $booking, &$storedPaths, &$replaced): void {
+                // Modul ini tidak menyentuh rooms, jadi cukup booking yang dikunci.
+                // Urutan rooms -> booking milik Reda/Nabil tidak dilanggar.
+                $locked = Booking::query()->lockForUpdate()->findOrFail($booking->id);
+
+                if ($locked->status === 'Disetujui') {
+                    $this->storeInitialProofs($locked, $request, $storedPaths);
+
+                    return;
+                }
+
+                if ($locked->status === 'Perlu Perbaikan') {
+                    $this->replaceRequestedProof($locked, $request, $storedPaths);
+                    $replaced = true;
+
+                    return;
+                }
+
+                throw ValidationException::withMessages([
+                    'booking' => 'Bukti hanya dapat dikirim saat peminjaman berstatus Disetujui atau Perlu Perbaikan.',
+                ]);
+            });
+        } catch (Throwable $exception) {
+            // File baru dibersihkan; file lama hanya dihapus setelah penggantian tersimpan.
+            Storage::disk('local')->delete($storedPaths);
+
+            throw $exception;
+        }
+
+        return back()->with('success', $replaced
+            ? 'Foto pengganti berhasil dikirim untuk diperiksa kembali.'
+            : 'Bukti pengembalian berhasil dikirim untuk diperiksa SPPI.');
     }
 
     public function show(Request $request, Booking $booking, string $category): StreamedResponse
@@ -73,7 +78,10 @@ class BookingProofController extends Controller
         return Storage::disk('local')->response(
             $proof->path,
             $proof->original_name,
-            ['Content-Type' => $proof->mime_type],
+            [
+                'Content-Type' => $proof->mime_type ?? 'application/octet-stream',
+                'Cache-Control' => 'private, no-store, max-age=0',
+            ],
         );
     }
 
@@ -113,109 +121,145 @@ class BookingProofController extends Controller
                     'status' => 'Perlu Perbaikan',
                     'inspection_note' => $validated['inspection_note'],
                 ]);
-
-                return;
+            } else {
+                $locked->update([
+                    'status' => 'Selesai',
+                    'inspection_note' => $validated['inspection_note'] ?? null,
+                ]);
             }
 
-            $locked->update([
-                'status' => 'Selesai',
-                'inspection_note' => $validated['inspection_note'] ?? null,
-            ]);
+            // Notifikasi ikut transaksi: rollback membatalkan status sekaligus notifikasi.
+            // shortcut: aktif otomatis setelah NotificationService milik Adis masuk main;
+            // hapus guard class_exists saat itu.
+            if (class_exists(NotificationService::class)) {
+                NotificationService::notifyProofReviewed($locked);
+            }
         });
 
         return back()->with('success', 'Hasil pemeriksaan bukti berhasil disimpan.');
     }
 
     /**
-     * @param array{ruangan: UploadedFile, kunci: UploadedFile} $files
+     * @param  array<int, string>  $storedPaths
      */
-    private function storeInitialProofs(Booking $booking, array $files): void
+    private function storeInitialProofs(Booking $booking, Request $request, array &$storedPaths): void
     {
-        $storedPaths = [];
+        $files = [];
 
-        try {
-            DB::transaction(function () use ($booking, $files, &$storedPaths): void {
-                foreach ($files as $category => $file) {
-                    $storedPaths[] = $this->storeProof($booking, $category, $file);
-                }
+        foreach (self::CATEGORIES as $category) {
+            $file = $request->file($category);
 
-                $booking->update([
-                    'status' => 'Periksa Bukti',
-                    'inspection_note' => null,
+            if (! $file) {
+                throw ValidationException::withMessages([
+                    $category => 'Dua foto bukti wajib diunggah.',
                 ]);
-            });
-        } catch (Throwable $exception) {
-            Storage::disk('local')->delete($storedPaths);
-
-            throw $exception;
-        }
-    }
-
-    private function replaceProof(Booking $booking, BookingProof $proof, UploadedFile $file): void
-    {
-        $oldPath = $proof->path;
-        $newPath = null;
-
-        try {
-            DB::transaction(function () use ($booking, $proof, $file, &$newPath): void {
-                $newPath = Storage::disk('local')->putFile(
-                    "booking-proofs/{$proof->booking_id}",
-                    $file,
-                );
-
-                $proof->update([
-                    'path' => $newPath,
-                    'original_name' => $file->getClientOriginalName(),
-                    'mime_type' => $file->getMimeType() ?? 'application/octet-stream',
-                    'size' => $file->getSize(),
-                    'uploaded_at' => now(),
-                    'requires_replacement' => false,
-                ]);
-
-                $booking->update([
-                    'status' => 'Periksa Bukti',
-                    'inspection_note' => null,
-                ]);
-            });
-        } catch (Throwable $exception) {
-            if ($newPath) {
-                Storage::disk('local')->delete($newPath);
             }
 
-            throw $exception;
+            $files[$category] = $file;
         }
 
-        Storage::disk('local')->delete($oldPath);
+        foreach ($files as $category => $file) {
+            $path = $this->putProofFile($booking, $file, $storedPaths);
+
+            $booking->proofs()->updateOrCreate(
+                ['category' => $category],
+                $this->proofAttributes($file, $path),
+            );
+        }
+
+        $booking->update([
+            'status' => 'Periksa Bukti',
+            'inspection_note' => null,
+        ]);
     }
 
-    private function storeProof(Booking $booking, string $category, UploadedFile $file): string
+    /**
+     * @param  array<int, string>  $storedPaths
+     */
+    private function replaceRequestedProof(Booking $booking, Request $request, array &$storedPaths): void
+    {
+        $category = $request->input('category');
+        $file = in_array($category, self::CATEGORIES, true) ? $request->file($category) : null;
+
+        if (! $file) {
+            throw ValidationException::withMessages([
+                'category' => 'Pilih kategori foto yang diminta untuk diperbaiki.',
+            ]);
+        }
+
+        // Baca ulang bukti di bawah penguncian booking; objek dari luar transaksi bisa usang.
+        $proof = $booking->proofs()
+            ->where('category', $category)
+            ->lockForUpdate()
+            ->first();
+
+        if (! $proof || ! $proof->requires_replacement) {
+            throw ValidationException::withMessages([
+                'category' => 'Foto ini tidak diminta untuk diperbaiki.',
+            ]);
+        }
+
+        $oldPath = $proof->path;
+        $path = $this->putProofFile($booking, $file, $storedPaths);
+
+        $proof->update($this->proofAttributes($file, $path));
+
+        $booking->update([
+            'status' => 'Periksa Bukti',
+            'inspection_note' => null,
+        ]);
+
+        // File lama baru dihapus setelah penggantian tersimpan.
+        DB::afterCommit(fn () => Storage::disk('local')->delete($oldPath));
+    }
+
+    /**
+     * @param  array<int, string>  $storedPaths
+     */
+    private function putProofFile(Booking $booking, UploadedFile $file, array &$storedPaths): string
     {
         $path = Storage::disk('local')->putFile("booking-proofs/{$booking->id}", $file);
 
-        $booking->proofs()->updateOrCreate(
-            ['category' => $category],
-            [
-                'path' => $path,
-                'original_name' => $file->getClientOriginalName(),
-                'mime_type' => $file->getMimeType() ?? 'application/octet-stream',
-                'size' => $file->getSize(),
-                'uploaded_at' => now(),
-                'requires_replacement' => false,
-            ],
-        );
+        if (! $path) {
+            throw ValidationException::withMessages([
+                'file' => 'Foto gagal disimpan. Silakan coba lagi.',
+            ]);
+        }
+
+        // Dicatat segera supaya kegagalan berikutnya ikut menghapus file ini.
+        $storedPaths[] = $path;
 
         return $path;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    private function proofAttributes(UploadedFile $file, string $path): array
+    {
+        return [
+            'path' => $path,
+            'original_name' => $file->getClientOriginalName(),
+            'mime_type' => $file->getMimeType() ?? 'application/octet-stream',
+            'size' => $file->getSize(),
+            // Waktu server menerima file, bukan waktu foto diambil.
+            'uploaded_at' => now(),
+            'requires_replacement' => false,
+        ];
+    }
+
     private function ensureOwner(Request $request, Booking $booking): void
     {
-        abort_unless($request->user()?->id === $booking->user_id, 403);
+        abort_unless(
+            $request->user() !== null && (int) $request->user()->id === (int) $booking->user_id,
+            403,
+        );
     }
 
     private function ensureOwnerOrAdmin(Request $request, Booking $booking): void
     {
         abort_unless(
-            $request->user()?->isAdmin() || $request->user()?->id === $booking->user_id,
+            $request->user()?->isAdmin() || (int) $request->user()?->id === (int) $booking->user_id,
             403,
         );
     }
