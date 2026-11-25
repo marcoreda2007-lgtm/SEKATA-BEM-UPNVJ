@@ -61,6 +61,136 @@ class BookingProofTest extends TestCase
             ->assertOk();
     }
 
+    public function test_owner_can_download_proof_as_attachment(): void
+    {
+        Storage::fake('local');
+
+        $owner = $this->makeUser();
+        $booking = $this->makeBooking($owner, 'Periksa Bukti');
+        $this->makeProof($booking, 'ruangan');
+
+        $response = $this->actingAs($owner)
+            ->get(route('peminjaman.bukti.download', [$booking, 'ruangan']));
+
+        $response->assertOk();
+        $response->assertDownload('ruangan.png');
+        $this->assertStringContainsString('attachment', $response->headers->get('content-disposition'));
+        $this->assertStringStartsWith(
+            base64_decode('iVBORw0KGgo'),
+            $response->streamedContent(),
+        );
+
+        // File tetap di disk private, bukan di public.
+        $proof = BookingProof::query()->where('booking_id', $booking->id)->firstOrFail();
+        Storage::disk('local')->assertExists($proof->path);
+        $this->assertFileDoesNotExist(public_path($proof->path));
+    }
+
+    public function test_admin_can_download_proof_of_another_unit(): void
+    {
+        Storage::fake('local');
+
+        $booking = $this->makeBooking($this->makeUser(), 'Periksa Bukti');
+        $this->makeProof($booking, 'kunci');
+
+        $this->actingAs($this->makeUser(role: 'admin'))
+            ->get(route('peminjaman.bukti.download', [$booking, 'kunci']))
+            ->assertOk()
+            ->assertDownload('kunci.png');
+    }
+
+    public function test_other_unit_and_guest_cannot_download_proof(): void
+    {
+        Storage::fake('local');
+
+        $booking = $this->makeBooking($this->makeUser(), 'Periksa Bukti');
+        $this->makeProof($booking, 'ruangan');
+
+        $this->get(route('peminjaman.bukti.download', [$booking, 'ruangan']))
+            ->assertRedirect(route('login'));
+
+        $this->actingAs($this->makeUser())
+            ->get(route('peminjaman.bukti.download', [$booking, 'ruangan']))
+            ->assertForbidden();
+    }
+
+    public function test_missing_file_returns_not_found_for_view_and_download(): void
+    {
+        Storage::fake('local');
+
+        $owner = $this->makeUser();
+        $booking = $this->makeBooking($owner, 'Periksa Bukti');
+        $proof = $this->makeProof($booking, 'ruangan');
+        Storage::disk('local')->delete($proof->path);
+
+        $this->actingAs($owner)
+            ->get(route('peminjaman.bukti.show', [$booking, 'ruangan']))
+            ->assertNotFound();
+
+        $this->actingAs($owner)
+            ->get(route('peminjaman.bukti.download', [$booking, 'ruangan']))
+            ->assertNotFound();
+    }
+
+    public function test_unknown_category_is_not_downloadable(): void
+    {
+        Storage::fake('local');
+
+        $owner = $this->makeUser();
+        $booking = $this->makeBooking($owner, 'Periksa Bukti');
+
+        $this->actingAs($owner)
+            ->get("/peminjaman/{$booking->id}/bukti/lainnya/unduh")
+            ->assertNotFound();
+    }
+
+    public function test_oversized_photo_gets_clear_size_message(): void
+    {
+        Storage::fake('local');
+
+        $owner = $this->makeUser();
+        $booking = $this->makeBooking($owner);
+
+        // 6 MB: di atas batas aplikasi 5 MB, di bawah post_max_size 40 MB.
+        $this->from("/peminjaman/{$booking->id}")
+            ->actingAs($owner)
+            ->post(route('peminjaman.bukti.store', $booking), [
+                'ruangan' => $this->fakePhoto('ruangan.png', 6 * 1024),
+                'kunci' => $this->fakePhoto('kunci.png'),
+            ])
+            ->assertSessionHasErrors(['ruangan' => 'Ukuran foto maksimal 5 MB.']);
+
+        $this->assertDatabaseCount('booking_proofs', 0);
+    }
+
+    public function test_photo_rejected_by_php_upload_limit_gets_server_limit_message(): void
+    {
+        Storage::fake('local');
+
+        $owner = $this->makeUser();
+        $booking = $this->makeBooking($owner);
+
+        // Simulasi UPLOAD_ERR_INI_SIZE seperti saat file melewati upload_max_filesize.
+        $oversized = new UploadedFile(
+            $this->fakePhoto('ruangan.png')->getPathname(),
+            'ruangan.png',
+            'image/png',
+            UPLOAD_ERR_INI_SIZE,
+            true,
+        );
+
+        $this->from("/peminjaman/{$booking->id}")
+            ->actingAs($owner)
+            ->post(route('peminjaman.bukti.store', $booking), [
+                'ruangan' => $oversized,
+                'kunci' => $this->fakePhoto('kunci.png'),
+            ])
+            ->assertSessionHasErrors('ruangan');
+
+        $this->assertDatabaseCount('booking_proofs', 0);
+        $this->assertCount(0, Storage::disk('local')->allFiles());
+    }
+
     public function test_single_photo_is_rejected_and_booking_stays_approved(): void
     {
         Storage::fake('local');
@@ -379,6 +509,12 @@ class BookingProofTest extends TestCase
         $this->assertSame($kunci->path, $kunci->fresh()->path);
         Storage::disk('local')->assertExists($ruangan->path);
         Storage::disk('local')->assertExists($kunci->path);
+
+        // Pesan tetap terlihat walau tidak ada form lagi di halaman.
+        $this->actingAs($owner)
+            ->get(route('peminjaman.show', $booking->id))
+            ->assertOk()
+            ->assertSee('Bukti hanya dapat dikirim saat peminjaman berstatus');
     }
 
     public function test_transaction_failure_cleans_up_new_files(): void
@@ -458,11 +594,12 @@ class BookingProofTest extends TestCase
     }
 
     // 1x1 PNG asli; UploadedFile::fake()->image() butuh ekstensi GD yang tidak terpasang di sini.
-    private function fakePhoto(string $name): UploadedFile
+    private function fakePhoto(string $name, int $padKb = 0): UploadedFile
     {
         return UploadedFile::fake()->createWithContent(
             $name,
-            base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='),
+            base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==')
+                .str_repeat("\0", $padKb * 1024),
         );
     }
 
