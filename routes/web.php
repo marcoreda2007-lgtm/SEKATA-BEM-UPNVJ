@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\BookingQueueController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BookingDetailController;
+use App\Http\Controllers\BookingHistoryController;
 use App\Http\Controllers\BookingProofController;
 use App\Http\Controllers\NotificationController;
 use Illuminate\Support\Facades\Auth;
@@ -44,6 +45,10 @@ Route::patch(
 )->middleware(['auth', 'role:admin'])
     ->whereNumber('id')
     ->name('admin.peminjaman.decide');
+
+Route::get('/peminjaman', [BookingHistoryController::class, 'index'])
+    ->middleware('auth')
+    ->name('peminjaman.index');
 
 Route::get('/peminjaman/{id}', [BookingDetailController::class, 'show'])
     ->middleware('auth')

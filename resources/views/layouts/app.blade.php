@@ -47,6 +47,11 @@
                         </a>
                     @endif
 
+                    <a href="{{ route('peminjaman.index') }}"
+                        class="sidebar-link {{ request()->routeIs('peminjaman.index') ? 'active' : '' }}">
+                        Riwayat Pengajuan
+                    </a>
+
                     <a href="{{ route('notifikasi.index') }}"
                         class="sidebar-link {{ request()->routeIs('notifikasi.*') ? 'active' : '' }}">
                         Notifikasi
@@ -109,6 +114,11 @@
                                 Antrean SPPI
                             </a>
                         @endif
+
+                        <a href="{{ route('peminjaman.index') }}"
+                            class="sidebar-link {{ request()->routeIs('peminjaman.index') ? 'active' : '' }}">
+                            Riwayat Pengajuan
+                        </a>
 
                         <a href="{{ route('notifikasi.index') }}"
                             class="sidebar-link {{ request()->routeIs('notifikasi.*') ? 'active' : '' }}">
