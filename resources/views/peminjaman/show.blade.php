@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Detail Peminjaman #' . $booking->id . ' · SEKATA')
+@section('title', 'Detail Peminjaman #' . $booking->id . ' - SEKATA | BEM UPNVJ')
 
 @push('styles')
     <link rel="stylesheet" href="{{ asset('css/booking-detail.css') }}">
@@ -117,7 +117,7 @@
                                     Oleh {{ $booking->decider->unit_name }}
                                 @endif
                                 @if($booking->decider && $decidedAtWib)
-                                    ·
+                                    -
                                 @endif
                                 @if($decidedAtWib)
                                     {{ $decidedAtWib }}

@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Masuk - SEKATA · BEM UPNVJ')
+@section('title', 'Masuk - SEKATA | BEM UPNVJ')
 
 @push('styles')
     <link rel="stylesheet" href="{{ asset('css/login.css') }}">
