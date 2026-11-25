@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\BookingQueueController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BookingDetailController;
 use App\Http\Controllers\BookingProofController;
+use App\Http\Controllers\NotificationController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -58,4 +59,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/admin/peminjaman/{booking}/pemeriksaan', [BookingProofController::class, 'inspect'])
         ->middleware('role:admin')
         ->name('admin.peminjaman.pemeriksaan.store');
+
+    Route::get('/notifikasi', [NotificationController::class, 'index'])
+        ->name('notifikasi.index');
+    Route::patch('/notifikasi/{notification}', [NotificationController::class, 'markAsRead'])
+        ->name('notifikasi.read');
 });

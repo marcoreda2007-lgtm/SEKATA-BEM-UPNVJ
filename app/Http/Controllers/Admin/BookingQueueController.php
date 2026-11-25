@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Booking;
 
 use App\Models\Room;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -53,6 +54,8 @@ class BookingQueueController extends Controller
             $booking->decided_by = $request->user()->id;
             $booking->decided_at = now();
             $booking->save();
+
+            NotificationService::notifyBookingDecision($booking);
         });
 
         return redirect()->route('peminjaman.show', $id)
