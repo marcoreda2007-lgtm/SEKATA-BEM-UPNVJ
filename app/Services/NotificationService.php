@@ -15,6 +15,12 @@ class NotificationService
      */
     public static function notifyBookingCreated(Booking $booking): void
     {
+        if ($booking->status !== 'Menunggu') {
+            throw new InvalidArgumentException(
+                "Status booking harus 'Menunggu' untuk notifikasi pengajuan baru."
+            );
+        }
+        
         $booking->loadMissing('user');
 
         $unitName = $booking->user?->unit_name ?? 'Unit Peminjam';
