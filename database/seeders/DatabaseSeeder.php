@@ -48,7 +48,7 @@ class DatabaseSeeder extends Seeder
 
         $rooms = [];
         foreach ($roomDefinitions as $roomData) {
-            $rooms[] = Room::updateOrCreate(
+            $rooms[] = Room::firstOrCreate(
                 ['name' => $roomData['name']],
                 [
                     'location' => $roomData['location'],
@@ -249,7 +249,7 @@ class DatabaseSeeder extends Seeder
                 $inspectionNote = 'Ruangan bersih dan kunci telah dikembalikan sesuai prosedur.';
             }
 
-            Booking::updateOrCreate(
+            Booking::firstOrCreate(
                 [
                     'room_id' => $room->id,
                     'tanggal' => $bookingDate,
