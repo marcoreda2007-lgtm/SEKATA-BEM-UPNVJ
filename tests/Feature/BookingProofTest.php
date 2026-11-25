@@ -267,6 +267,11 @@ class BookingProofTest extends TestCase
             'category' => 'kunci',
             'requires_replacement' => true,
         ]);
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $owner->id,
+            'booking_id' => $booking->id,
+            'type' => 'proof_revision_requested',
+        ]);
 
         $this->actingAs($owner)
             ->get(route('peminjaman.show', $booking->id))
@@ -310,6 +315,11 @@ class BookingProofTest extends TestCase
         $this->assertDatabaseHas('bookings', [
             'id' => $booking->id,
             'status' => 'Selesai',
+        ]);
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $owner->id,
+            'booking_id' => $booking->id,
+            'type' => 'proof_completed',
         ]);
 
         $this->actingAs($owner)
