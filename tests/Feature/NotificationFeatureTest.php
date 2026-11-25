@@ -331,7 +331,7 @@ class NotificationFeatureTest extends TestCase
         $this->assertFalse($decideOnce($pending));
         $this->assertSame(1, Notification::count());
     }
-    
+
     public function test_sppi_decision_via_patch_route_creates_one_notification_for_owner(): void
     {
         $room = $this->createRoom();
@@ -471,5 +471,128 @@ class NotificationFeatureTest extends TestCase
         $this->actingAs($pengkeima)
             ->get($notification->detailUrl())
             ->assertForbidden();
+    }
+
+    private function attachCompleteProofs(Booking $booking): void
+    {
+        foreach (['ruangan', 'kunci'] as $category) {
+            $booking->proofs()->create([
+                'category' => $category,
+                'path' => "booking-proofs/{$booking->id}/{$category}.jpg",
+                'original_name' => "{$category}.jpg",
+                'mime_type' => 'image/jpeg',
+                'size' => 1024,
+                'uploaded_at' => now(),
+                'requires_replacement' => false,
+            ]);
+        }
+    }
+
+    public function test_proof_inspection_perlu_perbaikan_via_endpoint_creates_one_notification_for_owner(): void
+    {
+        $room = $this->createRoom();
+        $sppi = $this->createUser('sppi@sekata.test', 'Biro SPPI', 'biro', 'admin');
+        $ekraf = $this->createUser('ekraf@sekata.test', 'Bidang Ekraf');
+        $pengkeima = $this->createUser('pengkeima@sekata.test', 'Bidang Pengkeima');
+
+        $booking = $this->createBooking($ekraf, $room, ['status' => 'Periksa Bukti']);
+        $this->attachCompleteProofs($booking);
+
+        $this->actingAs($sppi)
+            ->post(route('admin.peminjaman.pemeriksaan.store', $booking), [
+                'decision' => 'perbaikan',
+                'inspection_note' => 'Foto kunci buram, mohon unggah ulang.',
+                'requested_category' => 'kunci',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('Perlu Perbaikan', $booking->fresh()->status);
+        $this->assertSame(1, Notification::count());
+
+        $notification = Notification::firstOrFail();
+        $this->assertSame($ekraf->id, $notification->user_id);
+        $this->assertSame($booking->id, $notification->booking_id);
+        $this->assertSame(Notification::TYPE_PROOF_REVISION_REQUESTED, $notification->type);
+        $this->assertStringContainsString('Foto kunci buram, mohon unggah ulang.', $notification->message);
+        $this->assertSame(route('peminjaman.show', $booking->id), $notification->detailUrl());
+        $this->assertSame(0, Notification::forUser($pengkeima->id)->count());
+
+        $this->actingAs($ekraf)
+            ->get($notification->detailUrl())
+            ->assertOk();
+    }
+
+    public function test_proof_inspection_selesai_via_endpoint_creates_one_notification_for_owner(): void
+    {
+        $room = $this->createRoom();
+        $sppi = $this->createUser('sppi@sekata.test', 'Biro SPPI', 'biro', 'admin');
+        $ekraf = $this->createUser('ekraf@sekata.test', 'Bidang Ekraf');
+
+        $booking = $this->createBooking($ekraf, $room, ['status' => 'Periksa Bukti']);
+        $this->attachCompleteProofs($booking);
+
+        $this->actingAs($sppi)
+            ->post(route('admin.peminjaman.pemeriksaan.store', $booking), [
+                'decision' => 'selesai',
+                'inspection_note' => 'Ruangan bersih dan kunci telah kembali.',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('Selesai', $booking->fresh()->status);
+        $this->assertSame(1, Notification::count());
+
+        $notification = Notification::firstOrFail();
+        $this->assertSame($ekraf->id, $notification->user_id);
+        $this->assertSame($booking->id, $notification->booking_id);
+        $this->assertSame(Notification::TYPE_PROOF_COMPLETED, $notification->type);
+        $this->assertStringContainsString('Ruangan bersih dan kunci telah kembali.', $notification->message);
+        $this->assertSame(route('peminjaman.show', $booking->id), $notification->detailUrl());
+
+        $this->actingAs($ekraf)
+            ->get($notification->detailUrl())
+            ->assertOk();
+    }
+
+    public function test_invalid_or_repeated_proof_inspection_via_endpoint_does_not_add_notification(): void
+    {
+        $room = $this->createRoom();
+        $sppi = $this->createUser('sppi@sekata.test', 'Biro SPPI', 'biro', 'admin');
+        $ekraf = $this->createUser('ekraf@sekata.test', 'Bidang Ekraf');
+
+        $booking = $this->createBooking($ekraf, $room, ['status' => 'Periksa Bukti']);
+        $this->attachCompleteProofs($booking);
+
+        // Permintaan perbaikan tanpa catatan ditolak validasi dan tidak membuat notifikasi
+        $this->actingAs($sppi)
+            ->post(route('admin.peminjaman.pemeriksaan.store', $booking), [
+                'decision' => 'perbaikan',
+                'inspection_note' => '',
+                'requested_category' => 'kunci',
+            ])
+            ->assertSessionHasErrors('inspection_note');
+
+        $this->assertSame(0, Notification::count());
+
+        // Pemeriksaan pertama menjadi Perlu Perbaikan menghasilkan 1 notifikasi
+        $this->actingAs($sppi)
+            ->post(route('admin.peminjaman.pemeriksaan.store', $booking), [
+                'decision' => 'perbaikan',
+                'inspection_note' => 'Perbaiki foto kunci.',
+                'requested_category' => 'kunci',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('Perlu Perbaikan', $booking->fresh()->status);
+        $this->assertSame(1, Notification::count());
+
+        // Pemeriksaan ulang yang tidak valid (status masih Perlu Perbaikan) tidak menambah notifikasi
+        $this->actingAs($sppi)
+            ->post(route('admin.peminjaman.pemeriksaan.store', $booking), [
+                'decision' => 'selesai',
+            ])
+            ->assertSessionHasErrors('booking');
+
+        $this->assertSame('Perlu Perbaikan', $booking->fresh()->status);
+        $this->assertSame(1, Notification::count());
     }
 }

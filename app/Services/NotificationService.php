@@ -20,7 +20,7 @@ class NotificationService
                 "Status booking harus 'Menunggu' untuk notifikasi pengajuan baru."
             );
         }
-        
+
         $booking->loadMissing('user');
 
         $unitName = $booking->user?->unit_name ?? 'Unit Peminjam';
@@ -121,6 +121,6 @@ class NotificationService
         $start = substr((string) $booking->start_time, 0, 5);
         $end = substr((string) $booking->end_time, 0, 5);
 
-        return "{$tanggal}, {$start}–{$end} WIB";
+        return "{$tanggal}, {$start}â€“{$end} WIB";
     }
 }
