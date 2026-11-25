@@ -6,6 +6,7 @@
         $menuItems[] = ['route' => 'admin.peminjaman.index', 'label' => 'Antrean SPPI', 'path' => 'M9 5h12M9 12h12M9 19h12M3 5h1M3 12h1M3 19h1'];
     }
     $menuItems[] = ['route' => 'peminjaman.index', 'label' => 'Riwayat Pengajuan', 'path' => 'M3 11a9 9 0 1 1 2.6 7M3 4v7h7m2-4v5l3 2'];
+    $menuItems[] = ['route' => 'penitipan.index', 'label' => 'Penitipan Barang', 'path' => 'm12 3 9 5-9 5-9-5 9-5Zm-9 5v9l9 5 9-5V8m-9 5v9'];
     $menuItems[] = ['route' => 'notifikasi.index', 'label' => 'Notifikasi', 'path' => 'M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4'];
 @endphp
 <nav class="sidebar-nav" aria-label="Menu utama">
