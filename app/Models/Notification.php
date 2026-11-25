@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Facades\Route;
 
 class Notification extends Model
 {
@@ -67,8 +66,6 @@ class Notification extends Model
 
     public function detailUrl(): string
     {
-        return Route::has('peminjaman.show')
-            ? route('peminjaman.show', $this->booking_id)
-            : url('/peminjaman/' . $this->booking_id);
+        return route('peminjaman.show', $this->booking_id);
     }
 }

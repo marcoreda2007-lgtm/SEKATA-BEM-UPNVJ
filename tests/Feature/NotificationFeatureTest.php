@@ -331,4 +331,145 @@ class NotificationFeatureTest extends TestCase
         $this->assertFalse($decideOnce($pending));
         $this->assertSame(1, Notification::count());
     }
+    
+    public function test_sppi_decision_via_patch_route_creates_one_notification_for_owner(): void
+    {
+        $room = $this->createRoom();
+        $sppi = $this->createUser('sppi@sekata.test', 'Biro SPPI', 'biro', 'admin');
+        $ekraf = $this->createUser('ekraf@sekata.test', 'Bidang Ekraf');
+        $pengkeima = $this->createUser('pengkeima@sekata.test', 'Bidang Pengkeima');
+
+        $approvedBooking = $this->createBooking($ekraf, $room, ['status' => 'Menunggu']);
+
+        $this->actingAs($sppi)
+            ->patch(route('admin.peminjaman.decide', $approvedBooking->id), [
+                'status' => 'Disetujui',
+                'decision_reason' => 'Jadwal sesuai dan slot tersedia.',
+            ])
+            ->assertRedirect(route('peminjaman.show', $approvedBooking->id));
+
+        $this->assertSame('Disetujui', $approvedBooking->fresh()->status);
+        $this->assertSame(1, Notification::count());
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $ekraf->id,
+            'booking_id' => $approvedBooking->id,
+            'type' => Notification::TYPE_BOOKING_APPROVED,
+            'read_at' => null,
+        ]);
+        $this->assertSame(0, Notification::forUser($pengkeima->id)->count());
+        $this->assertSame(0, Notification::forUser($sppi->id)->count());
+
+        // Uji juga keputusan Ditolak melalui route PATCH yang sama
+        $rejectedBooking = $this->createBooking($ekraf, $room, [
+            'tanggal' => '2026-11-27',
+            'status' => 'Menunggu',
+        ]);
+
+        $this->actingAs($sppi)
+            ->patch(route('admin.peminjaman.decide', $rejectedBooking->id), [
+                'status' => 'Ditolak',
+                'decision_reason' => 'Bentrok agenda BEM.',
+            ])
+            ->assertRedirect(route('peminjaman.show', $rejectedBooking->id));
+
+        $this->assertSame('Ditolak', $rejectedBooking->fresh()->status);
+        $this->assertSame(2, Notification::count());
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $ekraf->id,
+            'booking_id' => $rejectedBooking->id,
+            'type' => Notification::TYPE_BOOKING_REJECTED,
+        ]);
+    }
+
+    public function test_repeated_decision_via_patch_route_does_not_add_extra_notification(): void
+    {
+        $room = $this->createRoom();
+        $sppi = $this->createUser('sppi@sekata.test', 'Biro SPPI', 'biro', 'admin');
+        $ekraf = $this->createUser('ekraf@sekata.test', 'Bidang Ekraf');
+
+        $booking = $this->createBooking($ekraf, $room, ['status' => 'Menunggu']);
+
+        $this->actingAs($sppi)
+            ->patch(route('admin.peminjaman.decide', $booking->id), [
+                'status' => 'Disetujui',
+                'decision_reason' => 'Keputusan pertama.',
+            ])
+            ->assertRedirect(route('peminjaman.show', $booking->id));
+
+        $this->assertSame(1, Notification::count());
+
+        $this->actingAs($sppi)
+            ->patch(route('admin.peminjaman.decide', $booking->id), [
+                'status' => 'Ditolak',
+                'decision_reason' => 'Percobaan keputusan ulang.',
+            ])
+            ->assertSessionHasErrors('decision');
+
+        $this->assertSame('Disetujui', $booking->fresh()->status);
+        $this->assertSame(1, Notification::count());
+    }
+
+    public function test_invalid_decision_via_patch_route_does_not_create_notification(): void
+    {
+        $room = $this->createRoom();
+        $sppi = $this->createUser('sppi@sekata.test', 'Biro SPPI', 'biro', 'admin');
+        $ekraf = $this->createUser('ekraf@sekata.test', 'Bidang Ekraf');
+
+        $booking = $this->createBooking($ekraf, $room, ['status' => 'Menunggu']);
+
+        // Alasan kosong ditolak validasi
+        $this->actingAs($sppi)
+            ->patch(route('admin.peminjaman.decide', $booking->id), [
+                'status' => 'Disetujui',
+                'decision_reason' => '',
+            ])
+            ->assertSessionHasErrors('decision_reason');
+
+        // Status tidak valid ditolak validasi
+        $this->actingAs($sppi)
+            ->patch(route('admin.peminjaman.decide', $booking->id), [
+                'status' => 'Menunggu',
+                'decision_reason' => 'Status tidak valid.',
+            ])
+            ->assertSessionHasErrors('status');
+
+        // Unit non-admin ditolak middleware role:admin
+        $this->actingAs($ekraf)
+            ->patch(route('admin.peminjaman.decide', $booking->id), [
+                'status' => 'Disetujui',
+                'decision_reason' => 'Coba akses admin.',
+            ])
+            ->assertForbidden();
+
+        $this->assertSame('Menunggu', $booking->fresh()->status);
+        $this->assertSame(0, Notification::count());
+    }
+
+    public function test_notification_detail_link_uses_peminjaman_show_route_and_enforces_authorization(): void
+    {
+        $room = $this->createRoom();
+        $sppi = $this->createUser('sppi@sekata.test', 'Biro SPPI', 'biro', 'admin');
+        $ekraf = $this->createUser('ekraf@sekata.test', 'Bidang Ekraf');
+        $pengkeima = $this->createUser('pengkeima@sekata.test', 'Bidang Pengkeima');
+
+        $booking = $this->createBooking($ekraf, $room, [
+            'status' => 'Disetujui',
+            'decision_reason' => 'Disetujui untuk rapat.',
+        ]);
+        $notification = NotificationService::notifyBookingDecision($booking);
+
+        $this->assertSame(route('peminjaman.show', $booking->id), $notification->detailUrl());
+
+        $this->actingAs($ekraf)
+            ->get($notification->detailUrl())
+            ->assertOk();
+
+        $this->actingAs($sppi)
+            ->get($notification->detailUrl())
+            ->assertOk();
+
+        $this->actingAs($pengkeima)
+            ->get($notification->detailUrl())
+            ->assertForbidden();
+    }
 }

@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Notifikasi · SEKATA')
+@section('title', 'Notifikasi - SEKATA | BEM UPNVJ')
 
 @section('content')
 @php
@@ -62,7 +62,7 @@
                             $createdWib = $notification->created_at
                                 ->copy()
                                 ->timezone('Asia/Jakarta')
-                                ->format('d M Y · H:i') . ' WIB';
+                                ->format('d M Y - H:i') . ' WIB';
                         @endphp
 
                         <article class="notif-item {{ $isUnread ? 'notif-item-unread' : '' }}">
@@ -85,7 +85,7 @@
                             @if($notification->booking)
                                 <div class="notif-meta mb-3">
                                     PIC: {{ $notification->booking->pic_name }} ({{ $notification->booking->pic_division }})
-                                    · Status saat ini: <strong>{{ $notification->booking->status }}</strong>
+                                    - Status saat ini: <strong>{{ $notification->booking->status }}</strong>
                                 </div>
                             @endif
 
