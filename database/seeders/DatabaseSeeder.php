@@ -19,8 +19,8 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        $defaultPassword = Hash::make(env('SEED_USER_PASSWORD', 'password'));
-
+        // Development-only credentials (each account uses <prefix>123 unless overridden via SEED_USER_PASSWORD).
+        // Must be rotated before any BEM pilot.
         $accounts = [
             [
                 'name' => 'Admin Biro SPPI',
@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
                 'unit_name' => 'Biro SPPI',
                 'unit_type' => 'biro',
                 'role' => 'admin',
+                'password' => 'sppi123',
             ],
             [
                 'name' => 'Bidang Minat dan Bakat',
@@ -35,6 +36,7 @@ class DatabaseSeeder extends Seeder
                 'unit_name' => 'Bidang Minat dan Bakat',
                 'unit_type' => 'bidang',
                 'role' => 'unit',
+                'password' => 'minatbakat123',
             ],
             [
                 'name' => 'Bidang Sosial dan Politik',
@@ -42,6 +44,7 @@ class DatabaseSeeder extends Seeder
                 'unit_name' => 'Bidang Sosial dan Politik',
                 'unit_type' => 'bidang',
                 'role' => 'unit',
+                'password' => 'sospol123',
             ],
             [
                 'name' => 'Bidang Kemahasiswaan',
@@ -49,6 +52,7 @@ class DatabaseSeeder extends Seeder
                 'unit_name' => 'Bidang Kemahasiswaan',
                 'unit_type' => 'bidang',
                 'role' => 'unit',
+                'password' => 'kemahasiswaan123',
             ],
             [
                 'name' => 'Bidang Pemberdayaan Perempuan dan Perlindungan Mahasiswa',
@@ -56,6 +60,7 @@ class DatabaseSeeder extends Seeder
                 'unit_name' => 'Bidang Pemberdayaan Perempuan dan Perlindungan Mahasiswa',
                 'unit_type' => 'bidang',
                 'role' => 'unit',
+                'password' => 'pppm123',
             ],
             [
                 'name' => 'Bidang Lingkungan Masyarakat',
@@ -63,6 +68,7 @@ class DatabaseSeeder extends Seeder
                 'unit_name' => 'Bidang Lingkungan Masyarakat',
                 'unit_type' => 'bidang',
                 'role' => 'unit',
+                'password' => 'lingmas123',
             ],
             [
                 'name' => 'Bidang Pengkeima',
@@ -70,6 +76,7 @@ class DatabaseSeeder extends Seeder
                 'unit_name' => 'Bidang Pengkeima',
                 'unit_type' => 'bidang',
                 'role' => 'unit',
+                'password' => 'pengkeima123',
             ],
             [
                 'name' => 'Bidang Ekraf',
@@ -77,6 +84,7 @@ class DatabaseSeeder extends Seeder
                 'unit_name' => 'Bidang Ekraf',
                 'unit_type' => 'bidang',
                 'role' => 'unit',
+                'password' => 'ekraf123',
             ],
             [
                 'name' => 'Biro Kesekretariatan',
@@ -84,6 +92,7 @@ class DatabaseSeeder extends Seeder
                 'unit_name' => 'Biro Kesekretariatan',
                 'unit_type' => 'biro',
                 'role' => 'unit',
+                'password' => 'kesekretariatan123',
             ],
             [
                 'name' => 'Biro Kebendaharaan',
@@ -91,6 +100,7 @@ class DatabaseSeeder extends Seeder
                 'unit_name' => 'Biro Kebendaharaan',
                 'unit_type' => 'biro',
                 'role' => 'unit',
+                'password' => 'kebendaharaan123',
             ],
             [
                 'name' => 'Biro Medkominfo',
@@ -98,8 +108,11 @@ class DatabaseSeeder extends Seeder
                 'unit_name' => 'Biro Medkominfo',
                 'unit_type' => 'biro',
                 'role' => 'unit',
+                'password' => 'medkominfo123',
             ],
         ];
+
+        $overridePassword = env('SEED_USER_PASSWORD');
 
         foreach ($accounts as $account) {
             User::updateOrCreate(
@@ -109,7 +122,7 @@ class DatabaseSeeder extends Seeder
                     'unit_name' => $account['unit_name'],
                     'unit_type' => $account['unit_type'],
                     'role' => $account['role'],
-                    'password' => $defaultPassword,
+                    'password' => Hash::make($overridePassword ?: $account['password']),
                 ]
             );
         }
