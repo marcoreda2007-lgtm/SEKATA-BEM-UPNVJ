@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\BookingDetailController;
 use App\Http\Controllers\Admin\BookingQueueController;
 
 Route::get('/', function () {
@@ -27,6 +28,11 @@ Route::post('/logout', [AuthController::class, 'logout'])
 Route::get('/jadwal', function () {
     return view('layouts.app');
 })->middleware('auth')->name('jadwal.index');
+
+Route::get('/peminjaman/{id}', [BookingDetailController::class, 'show'])
+    ->middleware('auth')
+    ->whereNumber('id')
+    ->name('peminjaman.show');
 
 Route::get('/admin/peminjaman', [BookingQueueController::class, 'index'])
     ->middleware(['auth', 'role:admin'])
