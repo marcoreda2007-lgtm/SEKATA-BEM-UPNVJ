@@ -42,7 +42,7 @@ Status in `main` as of 25 November 2026:
 
 ### Development accounts
 
-The seeder creates one room and 11 development accounts. Each seeded account uses `<email-prefix>123` as its default password:
+The repeatable seeder (`php artisan db:seed`) creates 6 secretariat rooms, 11 development accounts, and 55 deterministic sample bookings across all statuses and dates. Each seeded account uses `<email-prefix>123` as its default password:
 
 | Account | Email | Password | Role |
 | --- | --- | --- | --- |
@@ -82,7 +82,7 @@ The shared screens use Bootstrap 5 from a CDN and external CSS in `public/css`. 
 1. Clone the repository and install dependencies from its root, where `artisan` is located.
 
    ```powershell
-   git clone https://github.com/marcoreda2007-lgtm/SEKATA-BEM-UPNVJ.git
+   git clone [https://github.com/marcoreda2007-lgtm/SEKATA-BEM-UPNVJ.git](https://github.com/marcoreda2007-lgtm/SEKATA-BEM-UPNVJ.git)
    cd SEKATA-BEM-UPNVJ
    composer install
    npm.cmd install
@@ -108,7 +108,7 @@ The shared screens use Bootstrap 5 from a CDN and external CSS in `public/css`. 
 
    `sekata` is an example. **Each member can use a different local database name.** Set `DB_DATABASE` to the database you created and update the port and credentials for your installation. Commit migrations and `.env.example` so the team shares the same schema and setup template. Keep `.env`, local databases, and credentials out of Git.
 
-4. Run migrations and seed the initial room and accounts, then build assets and start the app.
+4. Run migrations and seed the initial rooms, accounts, and sample bookings, then build assets and start the app.
 
    ```powershell
    php artisan migrate --seed
@@ -142,8 +142,8 @@ Pending requests do not expire automatically under the current plan. SPPI must p
 | Entity | Purpose |
 | --- | --- |
 | `users` | In `main`: unit identities (`unit_name`, `unit_type`) and roles (`admin`/`unit`). The seeder creates 10 borrower accounts plus one SPPI admin. |
-| `rooms` | In `main`: the shared secretariat room record. |
-| `bookings` | In `main`: `tanggal`, `start_time`, `end_time`, activity, PIC, status (`Menunggu`, `Disetujui`, `Ditolak`, `Periksa Bukti`, `Perlu Perbaikan`, `Selesai`), and decision/inspection fields. No complete status-transition history table is present. |
+| `rooms` | In `main`: 6 seeded secretariat rooms (`Sekretariat BEM UPNVJ`, `Ruang Rapat Kabinet Gelora Juang`, `Ruang Kerja Biro & Bidang`, `Ruang Studio Medkominfo`, `Ruang Logistik & Inventaris SPPI`, and `Aula Mini Sekretariat`). |
+| `bookings` | In `main`: 55 seeded bookings across `tanggal`, `start_time`, `end_time`, activity, PIC, status (`Menunggu`, `Disetujui`, `Ditolak`, `Periksa Bukti`, `Perlu Perbaikan`, `Selesai`), and decision/inspection fields. No complete status-transition history table is present. |
 | `booking_proofs` | In `main`: private `ruangan` and `kunci` uploads. The server records upload time; this does not establish when a photo was taken. |
 | `notifications` | In `main`: recipient-specific booking notices with read/unread state. |
 | `item_deposits` | In `main`: owner account, depositor name, item description, deposit date, collection time, and owner archive time. No room booking is required. |
@@ -186,8 +186,8 @@ Each member owns the backend and frontend for their assigned feature. The assign
 
 | Member | Feature and responsibilities | Branch |
 | --- | --- | --- |
-| Hafiz Muhammad Shahzaib (`2510512901`) | **Auth and shared foundations.** Maintain shared account/room/booking migrations, the 11-account seeder, session login/logout, role middleware, and the shared layout foundation. Verify installation and coordinate schema contracts. | `feature/2510512901-auth-foundations` |
-| Ignatius Gavrilla Reda (`2510512020`) | **SPPI decisions, item deposits, and integration review.** Maintain the admin queue and decisions, booking list, item deposits, and collapsible sidebar. Coordinate direct SPPI booking with the shared submission flow. Review and merge member PRs, maintain documentation, and prepare presentation materials. | `feature/2510512020-sppi-decisions`, `feature/2510512020-item-deposits`, `feature/2510512020-collapsible-sidebar` |
+| Hafiz Muhammad Shahzaib (`2510512901`) | **Team Lead, auth, and shared foundations.** Coordinate team task allocation, deadlines, and schema contracts. Maintain shared account/room/booking migrations, explicit Eloquent model declarations/casts, the repeatable 6-room/11-account/55-booking seeder, session login/logout, role middleware, and the shared layout foundation. | `feature/2510512901-auth-foundations` |
+| Ignatius Gavrilla Reda (`2510512020`) | **Repository Host, Integration Lead, SPPI decisions, and item deposits.** Administer the GitHub repository, review and merge member PRs, and coordinate integration QA and reporting. Maintain the SPPI queue and decisions, booking list, item deposits, and collapsible sidebar. | `feature/2510512020-sppi-decisions`, `feature/2510512020-item-deposits`, `feature/2510512020-collapsible-sidebar` |
 | Maulida Nabil Alifah (`2510512138`) | **Calendar and booking requests.** Build the Monday–Sunday grid, week controls, unit highlighting, and request forms. Lock the room row in a transaction to reject overlapping `Menunggu`/`Disetujui` slots (allowing adjacent slots), validate description and PIC, and trigger SPPI notifications. | `feature/2510512138-calendar-booking` |
 | Adis Fawwaz Guspandi (`2510512055`) | **Status notifications.** Build the notification service contract, navbar unread badge, notification list, authorized detail links, and mark-as-read state (`PATCH /notifikasi/{id}`). Persist database notifications consistently with successful status transitions, so rollbacks leave no false notices. | `feature/2510512055-status-notifications` |
 | Muhammad Raehansyah (`2510512127`) | **Return evidence.** Build two-photo upload, private storage and authorized viewing (`GET /peminjaman/{id}/bukti/{kategori}`), SPPI inspection, and single-photo replacement. Validate file types and sizes, record server timestamps, and trigger inspection notifications. | `feature/2510512127-proof-verification` |

@@ -8,6 +8,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ItemDeposit extends Model
 {
+    protected $table = 'item_deposits';
+
+    protected $primaryKey = 'id';
+
+    public $timestamps = true;
+
     protected $fillable = [
         'depositor_name',
         'item_name',
@@ -18,6 +24,8 @@ class ItemDeposit extends Model
     protected function casts(): array
     {
         return [
+            'id' => 'integer',
+            'user_id' => 'integer',
             'deposited_on' => 'date',
             'collected_at' => 'datetime',
             'archived_at' => 'datetime',

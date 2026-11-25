@@ -16,6 +16,10 @@ class Notification extends Model
 
     protected $table = 'notifications';
 
+    protected $primaryKey = 'id';
+
+    public $timestamps = true;
+
     protected $fillable = [
         'user_id',
         'booking_id',
@@ -28,6 +32,9 @@ class Notification extends Model
     protected function casts(): array
     {
         return [
+            'id' => 'integer',
+            'user_id' => 'integer',
+            'booking_id' => 'integer',
             'read_at' => 'datetime',
         ];
     }
