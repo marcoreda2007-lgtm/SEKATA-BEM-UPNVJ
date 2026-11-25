@@ -140,11 +140,7 @@ class BookingProofController extends Controller
             }
 
             // Notifikasi ikut transaksi: rollback membatalkan status sekaligus notifikasi.
-            // shortcut: aktif otomatis setelah NotificationService milik Adis masuk main;
-            // hapus guard class_exists saat itu.
-            if (class_exists(NotificationService::class)) {
-                NotificationService::notifyProofReviewed($locked);
-            }
+            NotificationService::notifyProofReviewed($locked);
         });
 
         return back()->with('success', 'Hasil pemeriksaan bukti berhasil disimpan.');
