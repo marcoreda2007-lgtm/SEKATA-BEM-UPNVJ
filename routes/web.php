@@ -1,24 +1,27 @@
 <?php
 
+use App\Http\Controllers\Admin\BookingQueueController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BookingDetailController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Admin\BookingQueueController;
-use App\Http\Controllers\BookingDetailController;
 
 Route::get('/', function () {
-    if (! Auth::check()) {
+    if (!Auth::check()) {
         return redirect()->route('login');
     }
 
     return Auth::user()->isAdmin()
-        ? redirect('/admin/peminjaman')
-        : redirect('/jadwal');
+        ? redirect()->route('admin.peminjaman.index')
+        : redirect()->route('jadwal.index');
 });
 
 Route::middleware('guest')->group(function () {
-    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-    Route::post('/login', [AuthController::class, 'login'])->name('login.attempt');
+    Route::get('/login', [AuthController::class, 'showLogin'])
+        ->name('login');
+
+    Route::post('/login', [AuthController::class, 'login'])
+        ->name('login.attempt');
 });
 
 Route::post('/logout', [AuthController::class, 'logout'])
@@ -34,6 +37,6 @@ Route::get('/admin/peminjaman', [BookingQueueController::class, 'index'])
     ->name('admin.peminjaman.index');
 
 Route::get('/peminjaman/{id}', [BookingDetailController::class, 'show'])
-    ->whereNumber('id')
     ->middleware('auth')
+    ->whereNumber('id')
     ->name('peminjaman.show');
