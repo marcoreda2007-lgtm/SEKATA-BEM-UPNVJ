@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/notifications.css') }}">
     @stack('styles')
 </head>
 
@@ -39,6 +40,16 @@
                             Antrean SPPI
                         </a>
                     @endif
+
+                    <a href="{{ route('notifikasi.index') }}"
+                        class="sidebar-link justify-content-between {{ request()->routeIs('notifikasi.*') ? 'active' : '' }}">
+                        <span>Notifikasi</span>
+                        @if(($unreadNotificationCount ?? 0) > 0)
+                            <span class="badge rounded-pill notif-badge-count">
+                                {{ $unreadNotificationCount > 99 ? '99+' : $unreadNotificationCount }}
+                            </span>
+                        @endif
+                    </a>
                 </nav>
 
                 <div class="sidebar-footer">
@@ -94,6 +105,15 @@
                                 Antrean SPPI
                             </a>
                         @endif
+                        <a href="{{ route('notifikasi.index') }}"
+                            class="sidebar-link justify-content-between {{ request()->routeIs('notifikasi.*') ? 'active' : '' }}">
+                            <span>Notifikasi</span>
+                            @if(($unreadNotificationCount ?? 0) > 0)
+                                <span class="badge rounded-pill notif-badge-count">
+                                    {{ $unreadNotificationCount > 99 ? '99+' : $unreadNotificationCount }}
+                                </span>
+                            @endif
+                        </a>
                     </nav>
                     <div class="sidebar-footer">
                         <div class="active-account-box d-flex align-items-center gap-3 mb-2">
@@ -135,7 +155,11 @@
 
                     <div class="d-flex align-items-center gap-3">
                         {{-- Slot notifikasi untuk modul Adis --}}
-                        @yield('notifications')
+                        @hasSection('notifications')
+                            @yield('notifications')
+                        @else
+                            @include('partials.notification-badge')
+                        @endif
 
                         <span class="btn-sekata-secondary d-none d-sm-inline-flex align-items-center py-1 px-3"
                             style="min-height: 38px; font-size: 13px; cursor: default;">
