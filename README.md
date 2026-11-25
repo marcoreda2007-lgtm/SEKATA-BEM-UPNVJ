@@ -13,12 +13,12 @@
 
 <p align="center">
   A shared secretariat booking system for BEM UPNVJ.<br>
-  Web Programming Final Project · Information Systems · UPN “Veteran” Jakarta
+  Web Programming Final Project - Information Systems - UPN “Veteran” Jakarta
 </p>
 
 <p align="center">
-  <a href="#local-setup">Local setup</a> ·
-  <a href="#booking-workflow">Booking workflow</a> ·
+  <a href="#local-setup">Local setup</a> -
+  <a href="#booking-workflow">Booking workflow</a> -
   <a href="#team-and-ownership">Team</a>
 </p>
 
@@ -157,5 +157,5 @@ Each member owns the backend and frontend for their assigned feature. The assign
 4. **Reda reviews and merges approved PRs.** Members address review feedback on their own branches; new pushes update the same PR. Do not push directly to `main` or force-push shared branches.
 
 <p align="center">
-  <sub>BEM UPNVJ · Kabinet Gelora Juang</sub>
+  <sub>BEM UPNVJ - Kabinet Gelora Juang</sub>
 </p>

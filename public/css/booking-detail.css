@@ -1,0 +1,123 @@
+.pill-ditolak,
+.pill-periksa,
+.pill-selesai {
+    display: inline-block;
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.pill-ditolak {
+    background-color: #FDECEC;
+    color: #9E2A2B;
+}
+
+.pill-periksa {
+    background-color: #E6F0FA;
+    color: #1D4ED8;
+}
+
+.pill-selesai {
+    background-color: #E8ECEA;
+    color: #2E4239;
+}
+
+.detail-eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+}
+
+.detail-unit-title {
+    font-size: 18px;
+}
+
+.detail-label {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 2px;
+}
+
+.detail-meta {
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.detail-meta-sm {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.detail-box {
+    background-color: #F7FAF8;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 14px;
+}
+
+.detail-box--compact {
+    padding: 8px 10px;
+    font-size: 13px;
+}
+
+.detail-box--pre {
+    white-space: pre-line;
+}
+
+.status-record-item {
+    position: relative;
+    padding-left: 20px;
+    border-left: 2px solid var(--line);
+    padding-bottom: 18px;
+}
+
+.status-record-item:last-child {
+    padding-bottom: 0;
+    border-left-color: transparent;
+}
+
+.status-record-dot {
+    position: absolute;
+    left: -6px;
+    top: 5px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: var(--hijau-gelap);
+}
+
+.status-record-dot--kuning {
+    background-color: #EAB308;
+}
+
+.status-record-dot--hijau {
+    background-color: var(--hijau-bem);
+}
+
+.status-record-dot--merah {
+    background-color: #DC2626;
+}
+
+.status-record-dot--netral {
+    background-color: #94A3B8;
+}
+
+.proof-placeholder {
+    border: 1px dashed #C5D3CB;
+    background-color: #F7FAF8;
+    border-radius: 8px;
+    padding: 14px;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.detail-notice {
+    background-color: #F8FAFC;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 12px;
+    color: var(--muted);
+}
