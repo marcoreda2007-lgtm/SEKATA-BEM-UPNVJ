@@ -36,6 +36,13 @@ Route::get('/admin/peminjaman', [BookingQueueController::class, 'index'])
     ->middleware(['auth', 'role:admin'])
     ->name('admin.peminjaman.index');
 
+Route::patch(
+    '/admin/peminjaman/{id}/keputusan',
+    [BookingQueueController::class, 'decide']
+)->middleware(['auth', 'role:admin'])
+    ->whereNumber('id')
+    ->name('admin.peminjaman.decide');
+
 Route::get('/peminjaman/{id}', [BookingDetailController::class, 'show'])
     ->middleware('auth')
     ->whereNumber('id')
