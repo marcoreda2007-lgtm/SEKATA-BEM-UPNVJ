@@ -3,49 +3,7 @@
 @section('title', 'Masuk - SEKATA · BEM UPNVJ')
 
 @push('styles')
-<style>
-    .login-screen {
-        min-height: 100vh;
-        background-color: #103A2B;
-        border-top: 5px solid #F28C28;
-        color: #ffffff;
-        display: flex;
-        align-items: center;
-        padding: 40px 0;
-    }
-    .bem-header-logo {
-        width: 52px;
-        height: 52px;
-        object-fit: contain;
-        mix-blend-mode: lighten;
-        flex-shrink: 0;
-    }
-    .login-card {
-        background-color: #ffffff;
-        color: #16261F;
-        border-radius: 16px;
-        padding: 36px 34px;
-        box-shadow: 0 20px 45px rgba(0, 0, 0, 0.25);
-        max-width: 440px;
-        margin-left: auto;
-        margin-right: auto;
-    }
-    .phoenix-showcase {
-        margin: 22px 0;
-        display: flex;
-        align-items: center;
-    }
-    .phoenix-showcase img {
-        width: 165px;
-        height: auto;
-        filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.28));
-    }
-    @media (min-width: 992px) {
-        .login-card {
-            margin-right: 0;
-        }
-    }
-</style>
+    <link rel="stylesheet" href="{{ asset('css/login.css') }}">
 @endpush
 
 @section('content')

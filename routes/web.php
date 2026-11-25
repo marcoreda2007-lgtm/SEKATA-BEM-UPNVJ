@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\BookingQueueController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\NotificationController;
 use Illuminate\Support\Facades\Auth;
@@ -28,9 +29,9 @@ Route::get('/jadwal', function () {
     return view('layouts.app');
 })->middleware('auth')->name('jadwal.index');
 
-Route::get('/admin/peminjaman', function () {
-    return view('layouts.app');
-})->middleware(['auth', 'role:admin'])->name('admin.peminjaman.index');
+Route::get('/admin/peminjaman', [BookingQueueController::class, 'index'])
+    ->middleware(['auth', 'role:admin'])
+    ->name('admin.peminjaman.index');
 
 Route::middleware('auth')->group(function () {
     Route::get('/notifikasi', [NotificationController::class, 'index'])
