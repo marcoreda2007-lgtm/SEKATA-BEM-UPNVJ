@@ -82,7 +82,7 @@ The shared screens use Bootstrap 5 from a CDN and external CSS in `public/css`. 
 1. Clone the repository and install dependencies from its root, where `artisan` is located.
 
    ```powershell
-   git clone [https://github.com/marcoreda2007-lgtm/SEKATA-BEM-UPNVJ.git](https://github.com/marcoreda2007-lgtm/SEKATA-BEM-UPNVJ.git)
+   git clone https://github.com/marcoreda2007-lgtm/SEKATA-BEM-UPNVJ.git
    cd SEKATA-BEM-UPNVJ
    composer install
    npm.cmd install

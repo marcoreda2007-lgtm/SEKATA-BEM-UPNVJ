@@ -9,6 +9,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 
 /**
  * Dedicated exam and benchmark seeder (6 rooms, 55 bookings, and consistent proof records).
@@ -200,7 +201,15 @@ class ExamSeeder extends Seeder
             $binary = $this->buildTestProofPng($booking->id, $category);
 
             if (! Storage::disk('local')->exists($path)) {
-                Storage::disk('local')->put($path, $binary);
+                $written = Storage::disk('local')->put($path, $binary);
+
+                if ($written === false) {
+                    throw new RuntimeException(sprintf(
+                        'Failed to store seed proof file [%s] for booking #%d.',
+                        $path,
+                        $booking->id
+                    ));
+                }
             }
 
             $requiresReplacement = $booking->status === 'Perlu Perbaikan' && $category === 'kunci';

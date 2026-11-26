@@ -8,8 +8,11 @@ use App\Models\Room;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\ExamSeeder;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
+use Mockery;
+use RuntimeException;
 use Tests\TestCase;
 
 class ExamSeederTest extends TestCase
@@ -99,7 +102,7 @@ class ExamSeederTest extends TestCase
             $this->assertGreaterThan(0, Booking::where('status', $status)->count(), "Missing status: {$status}");
         }
 
-        // Verify valid time ranges and no duplicate/overlapping slots within the seeded dataset.
+        // Verify valid time ranges across the seeded dataset.
         $bookings = Booking::with('proofs')->get();
         foreach ($bookings as $booking) {
             $this->assertLessThan($booking->end_time, $booking->start_time);
@@ -146,5 +149,25 @@ class ExamSeederTest extends TestCase
             $this->assertTrue(Storage::disk('local')->exists($ruanganProof->path));
             $this->assertTrue(Storage::disk('local')->exists($kunciProof->path));
         }
+    }
+
+    public function test_exam_seeder_stops_with_clear_error_when_proof_storage_write_fails(): void
+    {
+        $disk = Mockery::mock(Filesystem::class);
+        $disk->shouldReceive('exists')->andReturn(false);
+        $disk->shouldReceive('put')->andReturn(false);
+
+        Storage::shouldReceive('disk')
+            ->with('local')
+            ->andReturn($disk);
+
+        try {
+            $this->seed(ExamSeeder::class);
+            $this->fail('Expected RuntimeException when proof storage write fails.');
+        } catch (RuntimeException $exception) {
+            $this->assertStringContainsString('Failed to store seed proof file', $exception->getMessage());
+        }
+
+        $this->assertSame(0, BookingProof::count());
     }
 }
