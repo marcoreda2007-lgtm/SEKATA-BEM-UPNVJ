@@ -38,6 +38,11 @@ class User extends Authenticatable
         return $this->hasMany(Booking::class);
     }
 
+    public function itemDeposits(): HasMany
+    {
+        return $this->hasMany(ItemDeposit::class);
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === 'admin';

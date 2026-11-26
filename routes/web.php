@@ -4,8 +4,10 @@ use App\Http\Controllers\Admin\BookingQueueController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\BookingDetailController;
+use App\Http\Controllers\BookingHistoryController;
 use App\Http\Controllers\BookingProofController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\ItemDepositController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -46,12 +48,25 @@ Route::patch(
     ->whereNumber('id')
     ->name('admin.peminjaman.decide');
 
+Route::get('/peminjaman', [BookingHistoryController::class, 'index'])
+    ->middleware('auth')
+    ->name('peminjaman.index');
+
 Route::get('/peminjaman/{id}', [BookingDetailController::class, 'show'])
     ->middleware('auth')
     ->whereNumber('id')
     ->name('peminjaman.show');
 
 Route::middleware('auth')->group(function () {
+    Route::get('/penitipan', [ItemDepositController::class, 'index'])->name('penitipan.index');
+    Route::post('/penitipan', [ItemDepositController::class, 'store'])->name('penitipan.store');
+    Route::patch('/penitipan/{deposit}/diambil', [ItemDepositController::class, 'collect'])
+        ->whereNumber('deposit')->name('penitipan.collect');
+    Route::patch('/penitipan/{deposit}/arsip', [ItemDepositController::class, 'archive'])
+        ->whereNumber('deposit')->name('penitipan.archive');
+    Route::get('/penitipan/foto/{photo}', [ItemDepositController::class, 'photo'])
+        ->whereNumber('photo')->name('penitipan.photo');
+
     Route::post('/peminjaman/{booking}/bukti', [BookingProofController::class, 'store'])
         ->name('peminjaman.bukti.store');
 

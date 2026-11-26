@@ -19,49 +19,37 @@
 <body>
     @auth
         <div class="app-shell">
-            <aside class="sekata-sidebar desktop-only">
-                <a href="{{ url('/') }}" class="sidebar-brand">
-                    <div class="brand-emblem">
-                        <img src="{{ asset('images/logo-bem.png') }}" alt="BEM UPNVJ">
-                    </div>
-                    <div>
-                        <div class="fw-bold lh-1" style="font-size: 18px; letter-spacing: 0.04em;">
-                            SEKATA
+            <aside class="sekata-sidebar desktop-only" id="desktopSidebar" aria-label="Navigasi desktop">
+                <div class="sidebar-header">
+                    <a href="{{ url('/') }}" class="sidebar-brand" aria-label="SEKATA - Beranda">
+                        <div class="brand-emblem">
+                            <img src="{{ asset('images/logo-bem.png') }}" alt="BEM UPNVJ">
                         </div>
-                        <div style="font-size: 11px; color: #A7C2B5; margin-top: 3px;">
-                            BEM UPNVJ
+                        <div class="sidebar-label">
+                            <div class="fw-bold lh-1 sidebar-brand-title">SEKATA</div>
+                            <div class="sidebar-brand-subtitle">BEM UPNVJ</div>
                         </div>
-                    </div>
-                </a>
-
-                <nav class="sidebar-nav">
-                    <a href="{{ route('jadwal.index') }}"
-                        class="sidebar-link {{ request()->is('jadwal*') ? 'active' : '' }}">
-                        Jadwal bersama
                     </a>
+                    <button type="button" id="sidebarToggle" class="sidebar-toggle"
+                        aria-controls="desktopSidebar" aria-expanded="true" aria-label="Minimalkan sidebar" title="Minimalkan sidebar">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                            <path d="M9 3v18m6-13-3 4 3 4" id="sidebarToggleArrow"></path>
+                        </svg>
+                    </button>
+                </div>
 
-                    @if(auth()->user()->isAdmin())
-                        <a href="{{ route('admin.peminjaman.index') }}"
-                            class="sidebar-link {{ request()->is('admin/peminjaman*') ? 'active' : '' }}">
-                            Antrean SPPI
-                        </a>
-                    @endif
-
-                    <a href="{{ route('notifikasi.index') }}"
-                        class="sidebar-link {{ request()->routeIs('notifikasi.*') ? 'active' : '' }}">
-                        Notifikasi
-                    </a>
-                </nav>
+                @include('partials.sidebar-nav')
 
                 <div class="sidebar-footer">
-                    <div class="active-account-box d-flex align-items-center gap-3 mb-2">
+                    <div class="active-account-box d-flex align-items-center gap-3 mb-2" title="{{ auth()->user()->unit_name }}" aria-label="{{ auth()->user()->unit_name }}">
                         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
                             class="flex-shrink-0" aria-hidden="true">
                             <circle cx="12" cy="8" r="4"></circle>
                             <path d="M4 21v-2a8 8 0 0 1 16 0v2"></path>
                         </svg>
 
-                        <div class="text-start">
+                        <div class="text-start sidebar-label">
                             <div class="fw-bold">
                                 {{ auth()->user()->unit_name }}
                             </div>
@@ -73,8 +61,11 @@
 
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
-                        <button type="submit" class="btn btn-danger w-100">
-                            Keluar
+                        <button type="submit" class="btn btn-danger w-100 sidebar-logout" aria-label="Keluar" title="Keluar">
+                            <svg class="sidebar-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M9 4H4v16h5m5-12 4 4-4 4m-6-4h13"></path>
+                            </svg>
+                            <span class="sidebar-label">Keluar</span>
                         </button>
                     </form>
                 </div>
@@ -97,24 +88,7 @@
                 </div>
 
                 <div class="offcanvas-body d-flex flex-column p-0">
-                    <nav class="sidebar-nav">
-                        <a href="{{ route('jadwal.index') }}"
-                            class="sidebar-link {{ request()->is('jadwal*') ? 'active' : '' }}">
-                            Jadwal bersama
-                        </a>
-
-                        @if(auth()->user()->isAdmin())
-                            <a href="{{ route('admin.peminjaman.index') }}"
-                                class="sidebar-link {{ request()->is('admin/peminjaman*') ? 'active' : '' }}">
-                                Antrean SPPI
-                            </a>
-                        @endif
-
-                        <a href="{{ route('notifikasi.index') }}"
-                            class="sidebar-link {{ request()->routeIs('notifikasi.*') ? 'active' : '' }}">
-                            Notifikasi
-                        </a>
-                    </nav>
+                    @include('partials.sidebar-nav')
 
                     <div class="sidebar-footer">
                         <div class="active-account-box d-flex align-items-center gap-3 mb-2">
@@ -187,19 +161,16 @@
                     @hasSection('content')
                         @yield('content')
                     @else
-                            <div class="sekata-card p-4">
-                                <h1 class="h3 fw-bold mb-2">
-                                    {{ auth()->user()->isAdmin()
-                        ? 'Antrean Biro SPPI'
-                        : 'Jadwal sekretariat' }}
-                                </h1>
-
-                                <p class="text-secondary mb-0">
-                                    {{ auth()->user()->isAdmin()
-                        ? 'Periksa pengajuan peminjaman yang menunggu keputusan.'
-                        : 'Lihat jadwal penggunaan sekretariat oleh seluruh bidang dan biro.' }}
-                                </p>
-                            </div>
+                        <div class="sekata-card p-4">
+                            <h1 class="h3 fw-bold mb-2">
+                                {{ auth()->user()->isAdmin() ? 'Antrean Biro SPPI' : 'Jadwal sekretariat' }}
+                            </h1>
+                            <p class="text-secondary mb-0">
+                                {{ auth()->user()->isAdmin()
+                                    ? 'Periksa pengajuan peminjaman yang menunggu keputusan.'
+                                    : 'Lihat jadwal penggunaan sekretariat oleh seluruh bidang dan biro.' }}
+                            </p>
+                        </div>
                     @endif
                 </main>
             </div>
@@ -209,6 +180,9 @@
     @endauth
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    @auth
+        <script src="{{ asset('js/sidebar.js') }}" defer></script>
+    @endauth
     @stack('scripts')
 </body>
 

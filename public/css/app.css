@@ -112,13 +112,48 @@ body {
     flex-shrink: 0;
 }
 .sidebar-brand {
-    padding: 22px 20px 18px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    flex: 1;
+    min-width: 0;
+    padding: 22px 8px 18px 20px;
     display: flex;
     align-items: center;
     gap: 12px;
     text-decoration: none;
     color: #ffffff;
+}
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    padding-right: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.sidebar-brand-title {
+    font-size: 18px;
+    letter-spacing: 0.04em;
+}
+.sidebar-brand-subtitle {
+    font-size: 11px;
+    color: #a7c2b5;
+    margin-top: 3px;
+}
+.sidebar-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #ffffff;
+}
+.sidebar-toggle:hover {
+    background: var(--hijau-nav);
+}
+.sidebar-toggle:focus-visible {
+    outline: 2px solid var(--oranye-gelora);
+    outline-offset: 2px;
 }
 .brand-emblem {
     width: 44px;
@@ -142,6 +177,7 @@ body {
     gap: 6px;
 }
 .sidebar-link {
+    gap: 12px;
     position: relative;
     display: flex;
     align-items: center;
@@ -152,7 +188,7 @@ body {
     text-decoration: none;
     font-size: 14px;
     font-weight: 500;
-    transition: all 0.15s ease;
+    transition: background-color 0.15s ease, color 0.15s ease;
 }
 .sidebar-link:hover {
     background-color: rgba(255, 255, 255, 0.06);
@@ -206,6 +242,67 @@ body {
 .sekata-content {
     padding: 28px;
     flex-grow: 1;
+}
+.sidebar-icon {
+    flex-shrink: 0;
+}
+.sidebar-logout {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    min-height: 44px;
+}
+.sidebar-tooltip {
+    display: none;
+}
+.sidebar-link:focus-visible,
+.sidebar-brand:focus-visible {
+    outline: 2px solid var(--oranye-gelora);
+    outline-offset: 2px;
+}
+@media (min-width: 992px) {
+    .sekata-sidebar.is-collapsed {
+        width: 80px;
+    }
+    .sekata-sidebar.is-collapsed .sidebar-label {
+        display: none;
+    }
+    .sekata-sidebar.is-collapsed .sidebar-brand {
+        padding: 22px 18px 18px;
+    }
+    .sekata-sidebar.is-collapsed .sidebar-header {
+        flex-direction: column;
+        padding: 0 0 8px;
+    }
+    .sekata-sidebar.is-collapsed .sidebar-nav,
+    .sekata-sidebar.is-collapsed .sidebar-footer {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+    .sekata-sidebar.is-collapsed .sidebar-link {
+        justify-content: center;
+        padding: 10px;
+    }
+    .sekata-sidebar.is-collapsed .active-account-box {
+        justify-content: center;
+        padding: 10px 0;
+    }
+    .sekata-sidebar.is-collapsed .sidebar-link:hover .sidebar-tooltip,
+    .sekata-sidebar.is-collapsed .sidebar-link:focus-visible .sidebar-tooltip {
+        display: block;
+        position: absolute;
+        left: calc(100% + 8px);
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 1080;
+        padding: 8px 12px;
+        border-radius: 6px;
+        background: var(--hijau-gelap);
+        color: #ffffff;
+        white-space: nowrap;
+        pointer-events: none;
+    }
 }
 @media (max-width: 991.98px) {
     .sekata-sidebar.desktop-only {

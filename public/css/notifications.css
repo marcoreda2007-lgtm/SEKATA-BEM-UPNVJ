@@ -1,12 +1,22 @@
 .notif-topbar-btn {
-    min-height: 38px;
-    padding: 6px 12px;
+    position: relative;
+    min-height: 44px;
+    width: 44px;
+    padding: 8px;
     font-size: 13px;
 }
 
+.notif-topbar-btn .notif-badge-count {
+    position: absolute;
+    top: -5px;
+    right: -7px;
+    padding: 4px 6px;
+}
+
 .notif-topbar-btn.is-active {
-    border-color: var(--hijau-bem);
-    color: var(--hijau-bem);
+    background-color: var(--hijau-gelap);
+    border-color: var(--hijau-gelap);
+    color: #ffffff;
 }
 
 .notif-badge-count {
