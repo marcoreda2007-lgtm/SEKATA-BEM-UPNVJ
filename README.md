@@ -42,7 +42,7 @@ Status in `main` as of 25 November 2026:
 
 ### Development accounts
 
-The repeatable seeder (`php artisan db:seed`) creates 6 secretariat rooms, 11 development accounts, and 55 deterministic sample bookings across all statuses and dates. Each seeded account uses `<email-prefix>123` as its default password:
+The default operational seeder (`php artisan db:seed`) creates one secretariat room (`Sekretariat BEM UPNVJ`) and 11 development accounts. Each seeded account uses `<email-prefix>123` as its default password:
 
 | Account | Email | Password | Role |
 | --- | --- | --- | --- |
@@ -108,7 +108,7 @@ The shared screens use Bootstrap 5 from a CDN and external CSS in `public/css`. 
 
    `sekata` is an example. **Each member can use a different local database name.** Set `DB_DATABASE` to the database you created and update the port and credentials for your installation. Commit migrations and `.env.example` so the team shares the same schema and setup template. Keep `.env`, local databases, and credentials out of Git.
 
-4. Run migrations and seed the initial rooms, accounts, and sample bookings, then build assets and start the app.
+4. Run migrations and seed the initial operational room and accounts, then build assets and start the app.
 
    ```powershell
    php artisan migrate --seed
@@ -117,6 +117,21 @@ The shared screens use Bootstrap 5 from a CDN and external CSS in `public/css`. 
    ```
 
    Open [http://127.0.0.1:8000](http://127.0.0.1:8000). Keep the development server running. For Vite-managed assets, run `npm.cmd run dev` in a second terminal. Edits to CSS in `public/css` only need a browser refresh; use Ctrl+F5 if cached styles persist.
+
+### Exam and benchmark dataset (`ExamSeeder`)
+
+To evaluate query counts (`with()` vs. lazy loading), pagination, and aggregate summaries against at least 40 bookings without altering the single-room operational setup, run `ExamSeeder` on a **separate test database** (for example `sekata_test`):
+
+1. Create an empty database named `sekata_test` in phpMyAdmin and temporarily set `DB_DATABASE=sekata_test` in `.env` (never run `migrate:fresh` against operational data).
+2. Rebuild and populate the exam dataset (6 rooms, 11 accounts, 55 bookings across all 6 statuses, and private synthetic PNG proofs for `Periksa Bukti`, `Perlu Perbaikan`, and `Selesai`):
+
+   ```powershell
+   php artisan config:clear
+   php artisan migrate:fresh --seed
+   php artisan db:seed --class=ExamSeeder
+   ```
+
+3. Verify idempotency by running `php artisan db:seed --class=ExamSeeder` a second time (`Booking::count()` stays `55`). `ExamSeeder` is intended for a dedicated test database: it uses `firstOrCreate` so exact slots and existing bookings/proofs are not overwritten, and does not check partial time overlaps against arbitrary pre-existing records. Restore `DB_DATABASE=sekata` and run `php artisan config:clear` when finished.
 
 The commands above use PowerShell on Windows. On macOS or Linux, use `cp .env.example .env` and `npm` in place of `Copy-Item` and `npm.cmd`.
 
@@ -142,9 +157,9 @@ Pending requests do not expire automatically under the current plan. SPPI must p
 | Entity | Purpose |
 | --- | --- |
 | `users` | In `main`: unit identities (`unit_name`, `unit_type`) and roles (`admin`/`unit`). The seeder creates 10 borrower accounts plus one SPPI admin. |
-| `rooms` | In `main`: 6 seeded secretariat rooms (`Sekretariat BEM UPNVJ`, `Ruang Rapat Kabinet Gelora Juang`, `Ruang Kerja Biro & Bidang`, `Ruang Studio Medkominfo`, `Ruang Logistik & Inventaris SPPI`, and `Aula Mini Sekretariat`). |
-| `bookings` | In `main`: 55 seeded bookings across `tanggal`, `start_time`, `end_time`, activity, PIC, status (`Menunggu`, `Disetujui`, `Ditolak`, `Periksa Bukti`, `Perlu Perbaikan`, `Selesai`), and decision/inspection fields. No complete status-transition history table is present. |
-| `booking_proofs` | In `main`: private `ruangan` and `kunci` uploads. The server records upload time; this does not establish when a photo was taken. |
+| `rooms` | In `main`: the operational secretariat room record (`Sekretariat BEM UPNVJ`); `ExamSeeder` adds 5 supplementary rooms on test databases for per-room aggregate testing. |
+| `bookings` | In `main`: `tanggal`, `start_time`, `end_time`, activity, PIC, status (`Menunggu`, `Disetujui`, `Ditolak`, `Periksa Bukti`, `Perlu Perbaikan`, `Selesai`), and decision/inspection fields. `ExamSeeder` populates 55 deterministic rows for test databases. No complete status-transition history table is present. |
+| `booking_proofs` | In `main`: private `ruangan` and `kunci` uploads. The server records upload time; this does not establish when a photo was taken. `ExamSeeder` creates synthetic private PNG fixtures for seeded proof statuses. |
 | `notifications` | In `main`: recipient-specific booking notices with read/unread state. |
 | `item_deposits` | In `main`: owner account, depositor name, item description, deposit date, collection time, and owner archive time. No room booking is required. |
 | `item_deposit_photos` | In `main`: private photos associated with each deposit. |
@@ -176,7 +191,7 @@ node --test tests/sidebar.test.cjs
 git diff --check
 ```
 
-Laravel feature tests use an in-memory SQLite database configured in `phpunit.xml`, separate from the application's MySQL database. Tests cover booking access and decisions, return evidence, notifications, booking lists, and item deposits. The Node.js tests cover sidebar state, persistence, and blocked browser storage.
+Laravel feature tests use an in-memory SQLite database configured in `phpunit.xml`, separate from the application's MySQL database. Tests cover booking access and decisions, return evidence, notifications, booking lists, item deposits, and seeder idempotency/consistency (`ExamSeederTest`). The Node.js tests cover sidebar state, persistence, and blocked browser storage.
 
 Before requesting review, also check the affected screens in a browser: owner/admin access, upload previews, confirmation dialogs, desktop sidebar controls, and the mobile drawer. SQLite tests do not verify MySQL locking under simultaneous requests.
 
@@ -186,7 +201,7 @@ Each member owns the backend and frontend for their assigned feature. The assign
 
 | Member | Feature and responsibilities | Branch |
 | --- | --- | --- |
-| Hafiz Muhammad Shahzaib (`2510512901`) | **Team Lead, auth, and shared foundations.** Coordinate team task allocation, deadlines, and schema contracts. Maintain shared account/room/booking migrations, explicit Eloquent model declarations/casts, the repeatable 6-room/11-account/55-booking seeder, session login/logout, role middleware, and the shared layout foundation. | `feature/2510512901-auth-foundations` |
+| Hafiz Muhammad Shahzaib (`2510512901`) | **Team Lead, auth, and shared foundations.** Coordinate team task allocation, deadlines, and schema contracts. Maintain shared account/room/booking migrations, explicit Eloquent model declarations/casts, operational `DatabaseSeeder` and test-only `ExamSeeder`, session login/logout, role middleware, and the shared layout foundation. | `feature/2510512901-auth-foundations` |
 | Ignatius Gavrilla Reda (`2510512020`) | **Repository Host, Integration Lead, SPPI decisions, and item deposits.** Administer the GitHub repository, review and merge member PRs, and coordinate integration QA and reporting. Maintain the SPPI queue and decisions, booking list, item deposits, and collapsible sidebar. | `feature/2510512020-sppi-decisions`, `feature/2510512020-item-deposits`, `feature/2510512020-collapsible-sidebar` |
 | Maulida Nabil Alifah (`2510512138`) | **Calendar and booking requests.** Build the Monday–Sunday grid, week controls, unit highlighting, and request forms. Lock the room row in a transaction to reject overlapping `Menunggu`/`Disetujui` slots (allowing adjacent slots), validate description and PIC, and trigger SPPI notifications. | `feature/2510512138-calendar-booking` |
 | Adis Fawwaz Guspandi (`2510512055`) | **Status notifications.** Build the notification service contract, navbar unread badge, notification list, authorized detail links, and mark-as-read state (`PATCH /notifikasi/{id}`). Persist database notifications consistently with successful status transitions, so rollbacks leave no false notices. | `feature/2510512055-status-notifications` |
