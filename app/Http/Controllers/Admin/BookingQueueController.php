@@ -4,8 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
-
-use App\Models\Room;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -25,6 +23,7 @@ class BookingQueueController extends Controller
             'bookings' => $bookings,
         ]);
     }
+
     public function decide(Request $request, $id)
     {
         $data = $request->validate([
@@ -32,14 +31,21 @@ class BookingQueueController extends Controller
             'decision_reason' => 'required|string|max:1000',
         ]);
 
-        $booking = Booking::findOrFail($id);
-
-        DB::transaction(function () use ($booking, $data, $request) {
-            Room::where('id', $booking->room_id)
+        DB::transaction(function () use ($id, $data, $request) {
+            // Lock the shared SPPI admin row.
+            $admin = DB::table('users')
+                ->where('role', 'admin')
+                ->orderBy('id')
                 ->lockForUpdate()
-                ->firstOrFail();
+                ->first();
 
-            $booking = Booking::where('id', $booking->id)
+            if (!$admin) {
+                throw ValidationException::withMessages([
+                    'decision' => 'Akun admin SPPI tidak ditemukan.',
+                ]);
+            }
+
+            $booking = Booking::where('id', $id)
                 ->lockForUpdate()
                 ->firstOrFail();
 

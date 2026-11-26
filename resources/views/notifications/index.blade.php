@@ -84,7 +84,7 @@
 
                             @if($notification->booking)
                                 <div class="notif-meta mb-3">
-                                    PIC: {{ $notification->booking->pic_name }} ({{ $notification->booking->pic_division }})
+                                    PIC: {{ $notification->booking->pic_name }}
                                     - Status saat ini: <strong>{{ $notification->booking->status }}</strong>
                                 </div>
                             @endif

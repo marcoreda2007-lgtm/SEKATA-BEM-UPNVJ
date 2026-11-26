@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\BookingQueueController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BookingController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\BookingDetailController;
 use App\Http\Controllers\BookingHistoryController;
@@ -36,6 +37,14 @@ Route::post('/logout', [AuthController::class, 'logout'])
 Route::get('/jadwal', [CalendarController::class, 'index'])
     ->middleware('auth')
     ->name('jadwal.index');
+
+Route::get('/booking/create', [BookingController::class, 'create'])
+    ->middleware('auth')
+    ->name('booking.create');
+
+Route::post('/booking', [BookingController::class, 'store'])
+    ->middleware('auth')
+    ->name('booking.store');
 
 Route::get('/admin/peminjaman', [BookingQueueController::class, 'index'])
     ->middleware(['auth', 'role:admin'])
