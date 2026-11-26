@@ -8,6 +8,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Booking extends Model
 {
+    protected $table = 'bookings';
+
+    protected $primaryKey = 'id';
+
+    public $timestamps = true;
+
     protected $fillable = [
         'user_id',
         'room_id',
@@ -27,6 +33,10 @@ class Booking extends Model
     protected function casts(): array
     {
         return [
+            'id' => 'integer',
+            'user_id' => 'integer',
+            'room_id' => 'integer',
+            'decided_by' => 'integer',
             'tanggal' => 'date',
             'decided_at' => 'datetime',
         ];
@@ -50,5 +60,10 @@ class Booking extends Model
     public function proofs(): HasMany
     {
         return $this->hasMany(BookingProof::class);
+    }
+
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(Notification::class);
     }
 }

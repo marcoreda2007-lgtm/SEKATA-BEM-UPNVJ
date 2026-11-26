@@ -14,8 +14,8 @@ class DatabaseSeeder extends Seeder
         Room::firstOrCreate(
             ['name' => 'Sekretariat BEM UPNVJ'],
             [
-                'location' => 'Sekretariat BEM UPNVJ',
-                'description' => 'Ruang sekretariat bersama untuk kegiatan seluruh bidang dan biro BEM UPNVJ.',
+                'location' => 'Gedung Kegiatan Mahasiswa Lt. 1',
+                'description' => 'Ruang sekretariat bersama untuk kegiatan bidang dan biro BEM UPNVJ.',
             ]
         );
 

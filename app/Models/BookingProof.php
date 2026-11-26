@@ -7,6 +7,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class BookingProof extends Model
 {
+    protected $table = 'booking_proofs';
+
+    protected $primaryKey = 'id';
+
+    public $timestamps = true;
+
     protected $fillable = [
         'booking_id',
         'category',
@@ -21,6 +27,9 @@ class BookingProof extends Model
     protected function casts(): array
     {
         return [
+            'id' => 'integer',
+            'booking_id' => 'integer',
+            'size' => 'integer',
             'uploaded_at' => 'datetime',
             'requires_replacement' => 'boolean',
         ];
