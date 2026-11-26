@@ -262,6 +262,21 @@ body {
     outline-offset: 2px;
 }
 @media (min-width: 992px) {
+    .sekata-sidebar.desktop-only {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        height: 100dvh;
+        align-self: flex-start;
+    }
+    .sekata-sidebar.desktop-only .sidebar-header,
+    .sekata-sidebar.desktop-only .sidebar-footer {
+        flex-shrink: 0;
+    }
+    .sekata-sidebar.desktop-only .sidebar-nav {
+        min-height: 0;
+        overflow-y: auto;
+    }
     .sekata-sidebar.is-collapsed {
         width: 80px;
     }
