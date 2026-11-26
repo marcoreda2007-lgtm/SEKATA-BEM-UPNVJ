@@ -1,16 +1,16 @@
 
 @extends('layouts.app')
 
-@section('title', 'Jadwal Sekretariat')
+@section('title', 'Jadwal bersama - SEKATA | BEM UPNVJ')
 
 @section('content')
 <div class="container-fluid py-4">
 
     {{-- Calendar heading --}}
     <div class="mb-4">
-        <h2 class="fw-bold text-dark">Calendar</h2>
+        <h2 class="fw-bold text-dark">Jadwal bersama</h2>
         <p class="text-muted mb-0">
-            Weekly room booking schedule
+            Jadwal penggunaan sekretariat oleh seluruh bidang dan biro.
         </p>
     </div>
 
@@ -19,27 +19,33 @@
 
         <div>
             <h5 class="fw-semibold mb-1">
-                {{ $weekStart->format('d M Y') }}
+                {{ $weekStart->copy()->locale('id')->translatedFormat('d F Y') }}
                 -
-                {{ $weekEnd->format('d M Y') }}
+                {{ $weekEnd->copy()->locale('id')->translatedFormat('d F Y') }}
             </h5>
-            <small class="text-muted">Monday - Sunday</small>
+            <small class="text-muted">Senin - Minggu</small>
         </div>
 
         <div class="d-flex gap-2">
             <a href="{{ route('jadwal.index', ['week' => $weekStart->copy()->subWeek()->toDateString()]) }}"
-               class="btn btn-outline-secondary">
-                Previous
+               class="btn btn-sekata-primary d-inline-flex align-items-center justify-content-center"
+               aria-label="Minggu sebelumnya" title="Minggu sebelumnya">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M19 12H5m7-7-7 7 7 7"></path>
+                </svg>
             </a>
 
             <a href="{{ route('jadwal.index', ['week' => now()->toDateString()]) }}"
-               class="btn btn-outline-secondary">
-                Today
+               class="btn btn-sekata-primary">
+                Minggu ini
             </a>
 
             <a href="{{ route('jadwal.index', ['week' => $weekStart->copy()->addWeek()->toDateString()]) }}"
-               class="btn btn-outline-secondary">
-                Next
+               class="btn btn-sekata-primary d-inline-flex align-items-center justify-content-center"
+               aria-label="Minggu berikutnya" title="Minggu berikutnya">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M5 12h14m-7-7 7 7-7 7"></path>
+                </svg>
             </a>
         </div>
 
@@ -55,16 +61,16 @@
                     <thead class="table-light">
                         <tr>
                             <th class="p-3" style="min-width: 150px;">
-                                Unit
+                                Biro & Bidang
                             </th>
 
                             @for ($day = $weekStart->copy(); $day->lte($weekEnd); $day->addDay())
                                 <th class="p-3 text-center" style="min-width: 130px;">
                                     <div class="fw-semibold">
-                                        {{ $day->format('D') }}
+                                        {{ $day->copy()->locale('id')->translatedFormat('l') }}
                                     </div>
                                     <small class="text-muted">
-                                        {{ $day->format('d M') }}
+                                        {{ $day->copy()->locale('id')->translatedFormat('d M') }}
                                     </small>
                                 </th>
                             @endfor
@@ -124,7 +130,7 @@
                         @empty
                             <tr>
                                 <td colspan="8" class="text-center text-muted p-4">
-                                    No units available.
+                                    Belum ada data bidang atau biro.
                                 </td>
                             </tr>
                         @endforelse

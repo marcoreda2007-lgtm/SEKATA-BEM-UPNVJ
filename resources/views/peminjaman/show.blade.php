@@ -25,6 +25,8 @@
             default => 'status-record-dot--netral',
         };
 
+        // Label keputusan hanya disebut Disetujui/Ditolak jika status saat ini
+        // memang mencerminkan keputusan tersebut; selain itu tampilkan netral.
         $decisionLabel = match ($booking->status) {
             'Disetujui' => 'Disetujui',
             'Ditolak' => 'Ditolak',
@@ -54,7 +56,7 @@
     </div>
 
     <div class="row g-3">
-        {{-- Kolom Kiri --}}
+        {{-- Kolom Kiri: Rincian Jadwal, Keputusan SPPI & Bukti Pengembalian --}}
         <div class="col-12 col-lg-7">
             {{-- Kartu Informasi Utama --}}
             <div class="sekata-card p-3 p-md-4 mb-3">
@@ -74,18 +76,29 @@
 
                 <div class="row g-3 small">
                     <div class="col-12 col-sm-6">
+                        <div class="detail-label">Ruangan</div>
+                        <div class="fw-semibold fs-6">{{ $booking->room?->name ?? '-' }}</div>
+                    </div>
+                    <div class="col-12 col-sm-6">
                         <div class="detail-label">Tanggal & Jam Penggunaan</div>
                         <div class="fw-semibold fs-6">
                             {{ $booking->tanggal?->format('d M Y') ?? '-' }},
-                            {{ substr((string) $booking->start_time, 0, 5) . '–' . substr((string) $booking->end_time, 0, 5) . ' WIB' }}
+                            {{
+        substr((string) $booking->start_time, 0, 5)
+        . '–'
+        . substr((string) $booking->end_time, 0, 5)
+        . ' WIB'
+                                }}
                         </div>
                     </div>
-
                     <div class="col-12 col-sm-6">
                         <div class="detail-label">Nama PIC</div>
                         <div class="fw-semibold fs-6">{{ $booking->pic_name }}</div>
                     </div>
-
+                    <div class="col-12 col-sm-6">
+                        <div class="detail-label">Divisi PIC</div>
+                        <div class="fw-semibold fs-6">{{ $booking->pic_division }}</div>
+                    </div>
                     <div class="col-12">
                         <div class="detail-label">Deskripsi Kegiatan</div>
                         <div class="detail-box detail-box--pre mt-1">{{ $booking->activity_description }}</div>
@@ -96,20 +109,21 @@
             {{-- Kartu Keputusan SPPI & Catatan Pemeriksaan --}}
             <div class="sekata-card p-3 p-md-4 mb-3">
                 <h2 class="h6 fw-bold mb-3">Keputusan SPPI & Catatan Pemeriksaan</h2>
-
                 @if ($errors->has('decision'))
                     <div class="alert alert-danger" role="alert">
                         {{ $errors->first('decision') }}
                     </div>
                 @endif
-
                 @if(auth()->user()->isAdmin() && $booking->status === 'Menunggu')
                     <form method="POST" action="{{ route('admin.peminjaman.decide', $booking->id) }}" class="mb-4">
                         @csrf
                         @method('PATCH')
 
                         <div class="mb-3">
-                            <label for="decision-status" class="form-label">Keputusan</label>
+                            <label for="decision-status" class="form-label">
+                                Keputusan
+                            </label>
+
                             <select id="decision-status" name="status" class="form-select" required>
                                 <option value="">Pilih keputusan</option>
                                 <option value="Disetujui" @selected(old('status') === 'Disetujui')>
@@ -126,9 +140,12 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="decision-reason" class="form-label">Alasan keputusan</label>
-                            <textarea id="decision-reason" name="decision_reason" class="form-control" rows="3"
-                                maxlength="1000" required>{{ old('decision_reason') }}</textarea>
+                            <label for="decision-reason" class="form-label">
+                                Alasan keputusan
+                            </label>
+
+                            <textarea id="decision-reason" name="decision_reason" class="form-control" rows="3" maxlength="1000"
+                                required>{{ old('decision_reason') }}</textarea>
 
                             @error('decision_reason')
                                 <p class="text-danger small mt-1">{{ $message }}</p>
@@ -140,7 +157,6 @@
                         </button>
                     </form>
                 @endif
-
                 <div class="mb-3">
                     <div class="detail-label">Keputusan SPPI</div>
                     @if($hasDecisionData)
@@ -148,17 +164,14 @@
                             <div>
                                 {{ filled($booking->decision_reason) ? $booking->decision_reason : 'Keputusan tercatat tanpa alasan tertulis.' }}
                             </div>
-
                             @if($booking->decider || $decidedAtWib)
                                 <div class="detail-meta-sm mt-2">
                                     @if($booking->decider)
                                         Oleh {{ $booking->decider->unit_name }}
                                     @endif
-
                                     @if($booking->decider && $decidedAtWib)
                                         -
                                     @endif
-
                                     @if($decidedAtWib)
                                         {{ $decidedAtWib }}
                                     @endif
@@ -180,11 +193,11 @@
                 </div>
             </div>
 
-            {{-- Kartu Bukti Pengembalian --}}
+            {{-- Kartu Bukti Pengembalian Sekretariat --}}
             @include('peminjaman.partials.proofs', ['booking' => $booking])
         </div>
 
-        {{-- Kolom Kanan --}}
+        {{-- Kolom Kanan: Ringkasan Status & Pencatatan --}}
         <div class="col-12 col-lg-5">
             <div class="sekata-card p-3 p-md-4">
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-1 mb-3">
@@ -205,22 +218,20 @@
                         </div>
                     </div>
 
-                    {{-- 2. Keputusan SPPI --}}
+                    {{-- 2. Keputusan SPPI (hanya berdasarkan data keputusan yang benar-benar tercatat) --}}
                     <div class="status-record-item">
-                        <span class="status-record-dot {{ $hasDecisionData ? $decisionDot : 'status-record-dot--netral' }}"></span>
-
+                        <span
+                            class="status-record-dot {{ $hasDecisionData ? $decisionDot : 'status-record-dot--netral' }}"></span>
                         @if($hasDecisionData)
                             <div class="d-flex flex-wrap justify-content-between align-items-center gap-1">
                                 <span class="fw-semibold small">{{ $decisionLabel }}</span>
                                 <span class="detail-meta-sm">{{ $decidedAtWib ?? 'Waktu keputusan belum tercatat' }}</span>
                             </div>
-
                             @if($booking->decider)
                                 <div class="detail-meta-sm">
                                     Oleh: {{ $booking->decider->unit_name }}
                                 </div>
                             @endif
-
                             @if(filled($booking->decision_reason))
                                 <div class="detail-box detail-box--compact mt-2">
                                     {{ $booking->decision_reason }}
@@ -232,7 +243,7 @@
                         @endif
                     </div>
 
-                    {{-- 3. Status saat ini --}}
+                    {{-- 3. Status saat ini & pembaruan data terakhir --}}
                     <div class="status-record-item">
                         <span class="status-record-dot {{ $currentStatusDot }}"></span>
                         <div class="d-flex flex-wrap justify-content-between align-items-center gap-1">
@@ -241,7 +252,6 @@
                         <div class="detail-meta-sm">
                             Pembaruan data terakhir: {{ $updatedAtWib ?? 'Belum tercatat' }}
                         </div>
-
                         @if(filled($booking->inspection_note))
                             <div class="detail-box detail-box--compact detail-box--pre mt-2">
                                 {{ $booking->inspection_note }}

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Booking;
 use App\Models\BookingProof;
+use App\Models\Room;
 use App\Models\User;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -479,14 +480,19 @@ class BookingProofTest extends TestCase
 
     private function makeBooking(User $owner, string $status = 'Disetujui'): Booking
     {
+        $room = Room::query()->create([
+            'name' => 'Sekretariat BEM',
+        ]);
 
         return Booking::query()->create([
             'user_id' => $owner->id,
+            'room_id' => $room->id,
             'tanggal' => '2026-11-25',
             'start_time' => '09:00',
             'end_time' => '11:00',
             'activity_description' => 'Rapat kerja.',
             'pic_name' => 'PIC Ekraf',
+            'pic_division' => 'Ekraf',
             'status' => $status,
         ]);
     }

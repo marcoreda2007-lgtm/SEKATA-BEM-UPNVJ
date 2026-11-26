@@ -3,7 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Booking;
+use App\Models\Room;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class BookingController extends Controller
 {
@@ -26,15 +30,38 @@ class BookingController extends Controller
             'responsibility_acknowledgement.accepted' => 'Pernyataan tanggung jawab harus disetujui.',
         ]);
 
-        Booking::create([
-            'user_id' => $request->user()->id,
-            'pic_name' => $data['pic_name'],
-            'activity_description' => $data['activity_description'],
-            'tanggal' => $data['tanggal'],
-            'start_time' => $data['start_time'],
-            'end_time' => $data['end_time'],
-            'status' => 'Menunggu',
-        ]);
+        DB::transaction(function () use ($request, $data) {
+            // Semua pengajuan memakai baris sekretariat yang sama sebagai pengunci.
+            $room = Room::where('name', 'Sekretariat BEM UPNVJ')->lockForUpdate()->firstOrFail();
+
+            $overlap = Booking::where('room_id', $room->id)
+                ->whereDate('tanggal', $data['tanggal'])
+                ->whereIn('status', ['Menunggu', 'Disetujui'])
+                ->where('start_time', '<', $data['end_time'] . ':00')
+                ->where('end_time', '>', $data['start_time'] . ':00')
+                ->lockForUpdate()
+                ->first();
+
+            if ($overlap) {
+                throw ValidationException::withMessages([
+                    'tanggal' => 'Jadwal tidak tersedia. Pilih tanggal atau jam lain.',
+                ]);
+            }
+
+            $booking = Booking::create([
+                'user_id' => $request->user()->id,
+                'room_id' => $room->id,
+                'pic_division' => $request->user()->unit_name,
+                'pic_name' => $data['pic_name'],
+                'activity_description' => $data['activity_description'],
+                'tanggal' => $data['tanggal'],
+                'start_time' => $data['start_time'],
+                'end_time' => $data['end_time'],
+                'status' => 'Menunggu',
+            ]);
+
+            NotificationService::notifyBookingCreated($booking);
+        });
 
         return redirect()->route('peminjaman.index')
             ->with('success', 'Pengajuan peminjaman berhasil dikirim.');

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Booking;
+use App\Models\Room;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -68,14 +69,17 @@ class BookingHistoryTest extends TestCase
 
     private function makeBooking(User $owner, string $status): Booking
     {
+        $room = Room::firstOrCreate(['name' => 'Sekretariat BEM UPNVJ']);
 
         return Booking::create([
             'user_id' => $owner->id,
+            'room_id' => $room->id,
             'tanggal' => '2026-11-28',
             'start_time' => '09:00:00',
             'end_time' => '11:00:00',
             'activity_description' => 'Kegiatan ' . fake()->uuid(),
             'pic_name' => 'PIC Pengajuan',
+            'pic_division' => 'Ekraf',
             'status' => $status,
             'created_at' => '2026-11-25 03:00:00',
         ]);

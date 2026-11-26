@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Booking;
+use App\Models\Room;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -24,16 +25,26 @@ class BookingDetailTest extends TestCase
         ], $overrides));
     }
 
+    private function makeRoom(array $overrides = []): Room
+    {
+        return Room::create(array_merge([
+            'name' => 'Ruang Rapat Utama',
+            'location' => 'Sekretariat BEM Lantai 2',
+            'description' => 'Ruang rapat kapasitas 20 orang',
+        ], $overrides));
+    }
 
-    private function makeBooking(User $owner, array $overrides = []): Booking
+    private function makeBooking(User $owner, Room $room, array $overrides = []): Booking
     {
         return Booking::create(array_merge([
             'user_id' => $owner->id,
+            'room_id' => $room->id,
             'tanggal' => '2026-11-28',
             'start_time' => '09:00:00',
             'end_time' => '11:00:00',
             'activity_description' => 'Rapat koordinasi program kerja bulanan',
             'pic_name' => 'Nadia Putri',
+            'pic_division' => 'Kajian Strategis',
             'status' => 'Menunggu',
             'decision_reason' => null,
             'inspection_note' => null,
@@ -45,7 +56,8 @@ class BookingDetailTest extends TestCase
     public function test_guest_is_redirected_to_login(): void
     {
         $owner = $this->makeUser();
-        $booking = $this->makeBooking($owner);
+        $room = $this->makeRoom();
+        $booking = $this->makeBooking($owner, $room);
 
         $this->get(route('peminjaman.show', $booking->id))
             ->assertRedirect(route('login'));
@@ -58,7 +70,8 @@ class BookingDetailTest extends TestCase
         );
 
         $owner = $this->makeUser(['unit_name' => 'Bidang Pengabdian Masyarakat']);
-        $booking = $this->makeBooking($owner, [
+        $room = $this->makeRoom(['name' => 'Ruang Diskusi A']);
+        $booking = $this->makeBooking($owner, $room, [
             'status' => 'Menunggu',
         ]);
 
@@ -68,7 +81,8 @@ class BookingDetailTest extends TestCase
         $response->assertOk()
             ->assertSee('Detail Peminjaman Sekretariat')
             ->assertSee('Bidang Pengabdian Masyarakat')
-            ->assertSee('09:00' . "\u{2013}" . '11:00 WIB')
+            ->assertSee('Ruang Diskusi A')
+            ->assertSee('09:00–11:00 WIB')
             ->assertSee('24 Nov 2026, 10:00 WIB')
             ->assertSee('Data keputusan SPPI belum tercatat.')
             ->assertSee('Data keputusan belum tercatat.')
@@ -81,7 +95,8 @@ class BookingDetailTest extends TestCase
     {
         $owner = $this->makeUser(['unit_name' => 'Bidang A']);
         $otherUnit = $this->makeUser(['unit_name' => 'Bidang B']);
-        $booking = $this->makeBooking($owner);
+        $room = $this->makeRoom();
+        $booking = $this->makeBooking($owner, $room);
 
         $this->actingAs($otherUnit)
             ->get(route('peminjaman.show', $booking->id))
@@ -96,7 +111,8 @@ class BookingDetailTest extends TestCase
             'unit_name' => 'SPPI BEM UPNVJ',
             'role' => 'admin',
         ]);
-        $booking = $this->makeBooking($owner, [
+        $room = $this->makeRoom();
+        $booking = $this->makeBooking($owner, $room, [
             'status' => 'Disetujui',
             'decision_reason' => 'Jadwal ruangan tersedia dan tidak bentrok.',
             'decided_by' => $admin->id,
@@ -122,7 +138,8 @@ class BookingDetailTest extends TestCase
             'unit_name' => 'SPPI BEM UPNVJ',
             'role' => 'admin',
         ]);
-        $booking = $this->makeBooking($owner, [
+        $room = $this->makeRoom();
+        $booking = $this->makeBooking($owner, $room, [
             'status' => 'Periksa Bukti',
             'decision_reason' => 'Silakan jaga kebersihan ruangan.',
             'decided_by' => $admin->id,
@@ -164,7 +181,8 @@ class BookingDetailTest extends TestCase
             'role' => 'admin',
         ]);
 
-        $booking = $this->makeBooking($owner);
+        $room = $this->makeRoom();
+        $booking = $this->makeBooking($owner, $room);
 
         $response = $this->actingAs($admin)
             ->patch(route('admin.peminjaman.decide', $booking->id), [
@@ -199,7 +217,7 @@ class BookingDetailTest extends TestCase
     {
         $owner = $this->makeUser();
         $admin = $this->makeUser(['role' => 'admin']);
-        $booking = $this->makeBooking($owner);
+        $booking = $this->makeBooking($owner, $this->makeRoom());
 
         $this->actingAs($admin)
             ->patch(route('admin.peminjaman.decide', $booking->id), [
@@ -228,7 +246,7 @@ class BookingDetailTest extends TestCase
     {
         $owner = $this->makeUser();
         $admin = $this->makeUser(['role' => 'admin']);
-        $booking = $this->makeBooking($owner);
+        $booking = $this->makeBooking($owner, $this->makeRoom());
 
         $this->actingAs($admin)
             ->patch(route('admin.peminjaman.decide', $booking->id), [
@@ -246,7 +264,7 @@ class BookingDetailTest extends TestCase
     public function test_unit_cannot_decide_its_own_booking(): void
     {
         $owner = $this->makeUser();
-        $booking = $this->makeBooking($owner);
+        $booking = $this->makeBooking($owner, $this->makeRoom());
 
         $this->actingAs($owner)
             ->patch(route('admin.peminjaman.decide', $booking->id), [
@@ -262,7 +280,7 @@ class BookingDetailTest extends TestCase
         $owner = $this->makeUser();
         $admin = $this->makeUser(['role' => 'admin']);
 
-        $booking = $this->makeBooking($owner, [
+        $booking = $this->makeBooking($owner, $this->makeRoom(), [
             'status' => 'Disetujui',
             'decision_reason' => 'Alasan keputusan pertama.',
             'decided_by' => $admin->id,
@@ -299,17 +317,18 @@ class BookingDetailTest extends TestCase
     {
         $owner = $this->makeUser();
         $admin = $this->makeUser(['role' => 'admin']);
+        $room = $this->makeRoom();
 
-        $pending = $this->makeBooking($owner, [
+        $pending = $this->makeBooking($owner, $room, [
             'activity_description' => 'Pengajuan yang masih menunggu',
         ]);
 
-        $this->makeBooking($owner, [
+        $this->makeBooking($owner, $room, [
             'status' => 'Disetujui',
             'activity_description' => 'Pengajuan yang sudah disetujui',
         ]);
 
-        $this->makeBooking($owner, [
+        $this->makeBooking($owner, $room, [
             'status' => 'Ditolak',
             'activity_description' => 'Pengajuan yang sudah ditolak',
         ]);

@@ -20,10 +20,10 @@ class CalendarController extends Controller
                 $date = Carbon::createFromFormat('!Y-m-d', $selectedDate);
 
                 if (!$date || $date->format('Y-m-d') !== $selectedDate) {
-                    abort(400, 'Invalid week date.');
+                    abort(400, 'Tanggal minggu tidak valid.');
                 }
             } catch (\Exception $e) {
-                abort(400, 'Invalid week date.');
+                abort(400, 'Tanggal minggu tidak valid.');
             }
         } else {
             $date = Carbon::today();
