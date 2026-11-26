@@ -64,15 +64,31 @@
     <h2 class="h5 mb-3" id="daftar-penitipan">Daftar penitipan</h2>
     @forelse ($deposits as $deposit)
         <article class="sekata-card p-3 p-md-4 mb-3" aria-labelledby="barang-{{ $deposit->id }}">
-            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 border-bottom pb-3 mb-3">
-                <div>
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+                <div class="d-flex align-items-center gap-3">
+                    @if ($deposit->photos->first())
+                        <img src="{{ route('penitipan.photo', $deposit->photos->first()) }}"
+                             alt="Foto barang: {{ $deposit->item_name }}" width="80" height="80"
+                             class="rounded object-fit-cover flex-shrink-0" loading="lazy">
+                    @endif
+                    <div>
+                    <span class="badge rounded-pill {{ $deposit->status === 'Dititipkan' ? 'text-bg-warning' : 'text-bg-success' }} px-3 py-2 mb-2">
+                        {{ $deposit->status }}
+                    </span>
                     <h3 class="h5 mb-1 text-break" id="barang-{{ $deposit->id }}">{{ $deposit->item_name }}</h3>
                     <p class="text-secondary mb-0">{{ $deposit->user->unit_name }}</p>
+                    </div>
                 </div>
-                <span class="badge rounded-pill {{ $deposit->status === 'Dititipkan' ? 'text-bg-warning' : 'text-bg-success' }} px-3 py-2">
-                    {{ $deposit->status }}
-                </span>
+                <div class="align-self-end">
+                <button type="button" class="btn btn-sekata-primary" data-bs-toggle="collapse"
+                        data-bs-target="#detail-penitipan-{{ $deposit->id }}"
+                        aria-controls="detail-penitipan-{{ $deposit->id }}" aria-expanded="false">
+                    Lihat detail
+                </button>
+                </div>
             </div>
+            <div class="collapse" id="detail-penitipan-{{ $deposit->id }}">
+                <div class="border-top mt-3 pt-3">
             <dl class="row mb-3">
                 <dt class="col-sm-3 text-secondary fw-normal">Penitip</dt>
                 <dd class="col-sm-9">{{ $deposit->depositor_name }}</dd>
@@ -163,6 +179,8 @@
                     </div>
                 </div>
             @endif
+                </div>
+            </div>
         </article>
     @empty
         <p class="sekata-card p-4 text-center text-secondary">Belum ada penitipan barang.</p>
