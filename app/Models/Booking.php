@@ -4,10 +4,17 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Booking extends Model
 {
+    protected $table = 'bookings';
+
+    protected $primaryKey = 'id';
+
+    public $timestamps = true;
+
     protected $fillable = [
         'user_id',
         'room_id',
@@ -50,5 +57,10 @@ class Booking extends Model
     public function proofs(): HasMany
     {
         return $this->hasMany(BookingProof::class);
+    }
+
+    public function facilities(): BelongsToMany
+    {
+        return $this->belongsToMany(Facility::class, 'booking_facility', 'booking_id', 'facility_id');
     }
 }

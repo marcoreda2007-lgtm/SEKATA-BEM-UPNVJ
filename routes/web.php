@@ -9,6 +9,8 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ItemDepositController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Admin\FacilityController;
+use App\Http\Controllers\BookingFacilityController;
 
 Route::get('/', function () {
     if (!Auth::check()) {
@@ -79,4 +81,24 @@ Route::middleware('auth')->group(function () {
         ->name('notifikasi.index');
     Route::patch('/notifikasi/{notification}', [NotificationController::class, 'markAsRead'])
         ->name('notifikasi.read');
+
+    Route::post('/peminjaman/{booking}/fasilitas', [BookingFacilityController::class, 'store'])
+        ->whereNumber('booking')
+        ->name('peminjaman.fasilitas.store');
+    Route::delete('/peminjaman/{booking}/fasilitas/{facility}', [BookingFacilityController::class, 'destroy'])
+        ->whereNumber(['booking', 'facility'])
+        ->name('peminjaman.fasilitas.destroy');
+
+    Route::middleware('role:admin')->group(function () {
+        Route::get('/admin/fasilitas', [FacilityController::class, 'index'])
+            ->name('admin.fasilitas.index');
+        Route::post('/admin/fasilitas', [FacilityController::class, 'store'])
+            ->name('admin.fasilitas.store');
+        Route::get('/admin/fasilitas/{facility}/edit', [FacilityController::class, 'edit'])
+            ->whereNumber('facility')
+            ->name('admin.fasilitas.edit');
+        Route::put('/admin/fasilitas/{facility}', [FacilityController::class, 'update'])
+            ->whereNumber('facility')
+            ->name('admin.fasilitas.update');
+    });
 });

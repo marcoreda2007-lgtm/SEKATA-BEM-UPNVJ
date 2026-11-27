@@ -106,6 +106,63 @@
                 </div>
             </div>
 
+            {{-- Kartu Fasilitas Sekretariat --}}
+         <div class="sekata-card p-3 p-md-4 mb-3">
+             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                 <h2 class="h6 fw-bold mb-0">Fasilitas Sekretariat yang Digunakan</h2>
+                 <span class="detail-meta-sm">{{ $booking->facilities->count() }} fasilitas terpasang</span>
+             </div>
+
+             @if($booking->facilities->isNotEmpty())
+                 <div class="d-flex flex-column gap-2 mb-3">
+                     @foreach($booking->facilities as $facility)
+                         <div class="detail-box d-flex flex-wrap justify-content-between align-items-center gap-2">
+                             <div>
+                                 <div class="fw-semibold">{{ $facility->name }}</div>
+                                 @if(filled($facility->description))
+                                     <div class="detail-meta-sm">{{ $facility->description }}</div>
+                                 @endif
+                             </div>
+                             <form method="POST"
+                                 action="{{ route('peminjaman.fasilitas.destroy', [$booking->id, $facility->id]) }}">
+                                 @csrf
+                                 @method('DELETE')
+                                 <button type="submit" class="btn btn-sm btn-outline-danger">
+                                     Lepas
+                                 </button>
+                             </form>
+                         </div>
+                     @endforeach
+                 </div>
+             @else
+                 <div class="detail-meta mb-3">Belum ada fasilitas tambahan yang dipilih untuk peminjaman ini.</div>
+             @endif
+
+             <form method="POST" action="{{ route('peminjaman.fasilitas.store', $booking->id) }}"
+                 class="row g-2 align-items-end">
+                 @csrf
+                 <div class="col-12 col-sm-8">
+                     <label for="facility-id" class="form-label small mb-1">Tambah Fasilitas</label>
+                     <select id="facility-id" name="facility_id" class="form-select" required>
+                         <option value="">Pilih fasilitas sekretariat</option>
+                         @foreach($availableFacilities as $facility)
+                             <option value="{{ $facility->id }}" @selected((int) old('facility_id') === (int) $facility->id)>
+                                 {{ $facility->name }}
+                             </option>
+                         @endforeach
+                     </select>
+                     @error('facility_id')
+                         <p class="text-danger small mt-1 mb-0">{{ $message }}</p>
+                     @enderror
+                 </div>
+                 <div class="col-12 col-sm-4">
+                     <button type="submit" class="btn btn-sekata-primary w-100">
+                         Pasang Fasilitas
+                     </button>
+                 </div>
+             </form>
+         </div>
+
             {{-- Kartu Keputusan SPPI & Catatan Pemeriksaan --}}
             <div class="sekata-card p-3 p-md-4 mb-3">
                 <h2 class="h6 fw-bold mb-3">Keputusan SPPI & Catatan Pemeriksaan</h2>
