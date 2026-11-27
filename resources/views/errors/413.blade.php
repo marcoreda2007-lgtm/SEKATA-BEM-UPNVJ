@@ -17,7 +17,7 @@
             </p>
             <p class="mb-3">
                 Kompres foto terlebih dahulu, lalu ulangi pengiriman. Batas ukuran foto pada
-                formulir bukti pengembalian adalah 5 MB per foto.
+                formulir bukti pengembalian adalah {{ intdiv((int) config('proof.photo_max_kb'), 1024) }} MB per foto.
             </p>
             <a href="{{ url()->previous() }}" class="btn btn-sekata-primary btn-sm">Kembali ke halaman sebelumnya</a>
         </div>

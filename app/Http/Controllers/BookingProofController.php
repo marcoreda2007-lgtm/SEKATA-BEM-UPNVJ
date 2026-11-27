@@ -33,13 +33,14 @@ class BookingProofController extends Controller
         }
 
         // Bentuk file divalidasi sebelum apa pun disimpan, untuk kedua alur.
+        $maxKb = (int) config('proof.photo_max_kb');
         $request->validate([
-            'ruangan' => ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png', 'max:5120'],
-            'kunci' => ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png', 'max:5120'],
+            'ruangan' => ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png', 'max:'.$maxKb],
+            'kunci' => ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png', 'max:'.$maxKb],
             'category' => ['nullable', 'in:ruangan,kunci'],
         ], [
-            'ruangan.max' => 'Ukuran foto maksimal 5 MB.',
-            'kunci.max' => 'Ukuran foto maksimal 5 MB.',
+            'ruangan.max' => 'Ukuran foto maksimal '.intdiv($maxKb, 1024).' MB.',
+            'kunci.max' => 'Ukuran foto maksimal '.intdiv($maxKb, 1024).' MB.',
         ]);
 
         $storedPaths = [];

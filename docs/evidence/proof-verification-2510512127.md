@@ -9,7 +9,7 @@ Data di bawah ini adalah **data uji lokal**, bukan data operasional. Waktu yang 
 | 6 | `medkominfo@sekata.test` | `Demo bukti pengembalian 2510512127 (data uji, bukan operasional)` | `Disetujui` | Alur unggah, unduh, perbaikan satu foto, dan `Selesai` |
 | 7 | `medkominfo@sekata.test` | `Demo batas ukuran unggah 2510512127 (data uji, bukan operasional)` | `Disetujui` | Uji batas ukuran 6 MB dan 45 MB |
 
-Akun lain yang dipakai: `sppi@sekata.test` (admin) dan `sospol@sekata.test` (unit lain). Kata sandi development sesuai `SEED_USER_PASSWORD` lokal (`password` pada mesin ini).
+Akun lain yang dipakai: `sppi@sekata.test` (admin) dan `sospol@sekata.test` (unit lain). Kata sandi development mengikuti `SEED_USER_PASSWORD` pada `.env` lokal; nilainya tidak dicatat di sini.
 
 ## Konfigurasi PHP yang dipakai server web
 

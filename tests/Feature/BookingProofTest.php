@@ -185,7 +185,9 @@ class BookingProofTest extends TestCase
                 'ruangan' => $oversized,
                 'kunci' => $this->fakePhoto('kunci.png'),
             ])
-            ->assertSessionHasErrors('ruangan');
+            ->assertSessionHasErrors([
+                'ruangan' => 'Ukuran foto melebihi batas unggah server ('.ini_get('upload_max_filesize').'). Kompres foto lalu coba lagi.',
+            ]);
 
         $this->assertDatabaseCount('booking_proofs', 0);
         $this->assertCount(0, Storage::disk('local')->allFiles());
