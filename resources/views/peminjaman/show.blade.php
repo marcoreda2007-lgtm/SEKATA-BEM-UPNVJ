@@ -39,19 +39,39 @@
     @endphp
 
     {{-- Header Halaman --}}
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
-        <div>
-            <div class="text-uppercase fw-semibold detail-eyebrow">
-                Pengajuan #{{ $booking->id }}
-            </div>
-            <h1 class="h4 fw-bold mb-0">Detail Peminjaman Sekretariat</h1>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <div>
+        <div class="text-uppercase fw-semibold detail-eyebrow">
+            Pengajuan #{{ $booking->id }}
         </div>
+        <h1 class="h4 fw-bold mb-0">Detail Peminjaman Sekretariat</h1>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2">
+        @if (!auth()->user()->isAdmin() && auth()->id() === $booking->user_id && $booking->status === 'Menunggu')
+            <a href="{{ route('peminjaman.edit', $booking->id) }}"
+               class="btn btn-warning">
+                Edit Pengajuan
+            </a>
+
+            <form method="POST"
+                  action="{{ route('peminjaman.destroy', $booking->id) }}"
+                  onsubmit="return confirm('Yakin ingin menghapus pengajuan ini?')">
+                @csrf
+                @method('DELETE')
+
+                <button type="submit" class="btn btn-danger">
+                    Hapus Pengajuan
+                </button>
+            </form>
+        @endif
 
         <a href="{{ auth()->user()->isAdmin() ? route('admin.peminjaman.index') : route('jadwal.index') }}"
-            class="btn btn-sekata-secondary">
-            ← Kembali
+           class="btn btn-sekata-secondary">
+            Kembali
         </a>
     </div>
+</div>
 
     <div class="row g-3">
         {{-- Kolom Kiri --}}
@@ -60,7 +80,8 @@
             <div class="sekata-card p-3 p-md-4 mb-3">
                 <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 pb-3 mb-3 border-bottom">
                     <div>
-                        <div class="fw-bold detail-unit-title">{{ $booking->user?->unit_name ?? '-' }}</div>
+                        <div class="fw-bold detail-unit-title">
+                            Biro/Bidang: {{ $booking->user?->unit_name ?? '-' }}</div>
                         <div class="detail-meta">
                             @if($createdAtWib)
                                 Diajukan {{ $createdAtWib }}

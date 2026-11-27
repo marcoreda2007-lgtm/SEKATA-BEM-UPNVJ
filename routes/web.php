@@ -61,6 +61,21 @@ Route::get('/peminjaman', [BookingHistoryController::class, 'index'])
     ->middleware('auth')
     ->name('peminjaman.index');
 
+Route::get('/peminjaman/{id}/edit', [BookingController::class, 'edit'])
+    ->middleware('auth')
+    ->whereNumber('id')
+    ->name('peminjaman.edit');
+
+Route::put('/peminjaman/{id}', [BookingController::class, 'update'])
+    ->middleware('auth')
+    ->whereNumber('id')
+    ->name('peminjaman.update');
+
+Route::delete('/peminjaman/{id}', [BookingController::class, 'destroy'])
+    ->middleware('auth')
+    ->whereNumber('id')
+    ->name('peminjaman.destroy');
+
 Route::get('/peminjaman/{id}', [BookingDetailController::class, 'show'])
     ->middleware('auth')
     ->whereNumber('id')

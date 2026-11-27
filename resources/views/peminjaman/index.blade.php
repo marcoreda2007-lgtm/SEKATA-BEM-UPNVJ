@@ -16,7 +16,7 @@
                     <th scope="col">Kegiatan</th>
                     <th scope="col">Jadwal</th>
                     <th scope="col">Status</th>
-                    <th scope="col">Detail</th>
+                    <th scope="col">Aksi</th>
                 </tr>
             </thead>
             <tbody>
@@ -32,9 +32,31 @@
                         </td>
                         <td>{{ $booking->status }}</td>
                         <td>
-                            <a href="{{ route('peminjaman.show', $booking->id) }}"
-                               class="btn btn-sekata-secondary btn-sm">Lihat detail</a>
-                        </td>
+    <div class="d-flex flex-wrap gap-1">
+        <a href="{{ route('peminjaman.show', $booking->id) }}"
+           class="btn btn-sekata-secondary btn-sm">
+            Lihat detail
+        </a>
+
+        @if (!auth()->user()->isAdmin() && $booking->status === 'Menunggu')
+            <a href="{{ route('peminjaman.edit', $booking->id) }}"
+               class="btn btn-warning btn-sm">
+                Edit
+            </a>
+
+            <form method="POST"
+                  action="{{ route('peminjaman.destroy', $booking->id) }}"
+                  onsubmit="return confirm('Yakin ingin menghapus pengajuan ini?')">
+                @csrf
+                @method('DELETE')
+
+                <button type="submit" class="btn btn-danger btn-sm">
+                    Hapus
+                </button>
+            </form>
+        @endif
+    </div>
+</td>
                     </tr>
                 @empty
                     <tr>
