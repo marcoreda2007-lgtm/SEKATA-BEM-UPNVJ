@@ -191,6 +191,23 @@ class BookingProofTest extends TestCase
         $this->assertCount(0, Storage::disk('local')->allFiles());
     }
 
+    public function test_request_larger_than_post_max_size_renders_clear_page(): void
+    {
+        $owner = $this->makeUser();
+        $booking = $this->makeBooking($owner);
+
+        // PHP membuang seluruh body saat melewati post_max_size; Laravel melempar 413.
+        $this->actingAs($owner)
+            ->call('POST', route('peminjaman.bukti.store', $booking), [], [], [], [
+                'CONTENT_LENGTH' => (string) (100 * 1024 * 1024),
+            ])
+            ->assertStatus(413)
+            ->assertSee('Berkas yang dikirim terlalu besar')
+            ->assertSee('tidak ada data yang tersimpan');
+
+        $this->assertDatabaseCount('booking_proofs', 0);
+    }
+
     public function test_single_photo_is_rejected_and_booking_stays_approved(): void
     {
         Storage::fake('local');
