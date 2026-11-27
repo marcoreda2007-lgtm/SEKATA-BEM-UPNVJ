@@ -3,7 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Booking;
+use App\Models\Room;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class BookingController extends Controller
 {
@@ -26,17 +30,53 @@ class BookingController extends Controller
             'responsibility_acknowledgement.accepted' => 'Pernyataan tanggung jawab harus disetujui.',
         ]);
 
-        Booking::create([
-            'user_id' => $request->user()->id,
-            'pic_name' => $data['pic_name'],
-            'activity_description' => $data['activity_description'],
-            'tanggal' => $data['tanggal'],
-            'start_time' => $data['start_time'],
-            'end_time' => $data['end_time'],
-            'status' => 'Menunggu',
-        ]);
+        DB::transaction(function () use ($request, $data) {
 
-        return redirect()->route('peminjaman.index')
+            // Kunci baris ruang sekretariat agar pengajuan
+            // lain harus menunggu sebelum mengecek jadwal.
+            $room = Room::query()
+                ->where('name', 'Sekretariat BEM UPNVJ')
+                ->lockForUpdate()
+                ->first();
+
+            if (! $room) {
+                throw ValidationException::withMessages([
+                    'tanggal' => 'Data ruang sekretariat belum tersedia. Silakan hubungi administrator.',
+                ]);
+            }
+
+            // Cek jadwal yang masih aktif.
+            // Jadwal Ditolak tidak dianggap bentrok.
+            $hasConflict = Booking::query()
+                ->whereDate('tanggal', $data['tanggal'])
+                ->whereIn('status', ['Menunggu', 'Disetujui'])
+                ->where('start_time', '<', $data['end_time'])
+                ->where('end_time', '>', $data['start_time'])
+                ->exists();
+
+            if ($hasConflict) {
+                throw ValidationException::withMessages([
+                    'tanggal' => 'Jadwal sekretariat sudah digunakan pada waktu tersebut. Silakan pilih tanggal atau jam lain.',
+                ]);
+            }
+
+            // Simpan booking menggunakan ID akun yang sedang login.
+            $booking = Booking::create([
+                'user_id' => $request->user()->id,
+                'pic_name' => $data['pic_name'],
+                'activity_description' => $data['activity_description'],
+                'tanggal' => $data['tanggal'],
+                'start_time' => $data['start_time'],
+                'end_time' => $data['end_time'],
+                'status' => 'Menunggu',
+            ]);
+
+            // Kirim notifikasi menggunakan service milik Adis.
+            NotificationService::notifyBookingCreated($booking);
+        }, 3);
+
+        return redirect()
+            ->route('peminjaman.index')
             ->with('success', 'Pengajuan peminjaman berhasil dikirim.');
     }
 }
