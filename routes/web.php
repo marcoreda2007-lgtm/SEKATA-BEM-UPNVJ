@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Admin\BookingQueueController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BookingController;
+use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\BookingDetailController;
 use App\Http\Controllers\BookingHistoryController;
 use App\Http\Controllers\BookingProofController;
@@ -32,9 +34,17 @@ Route::post('/logout', [AuthController::class, 'logout'])
     ->middleware('auth')
     ->name('logout');
 
-Route::get('/jadwal', function () {
-    return view('layouts.app');
-})->middleware('auth')->name('jadwal.index');
+Route::get('/jadwal', [CalendarController::class, 'index'])
+    ->middleware('auth')
+    ->name('jadwal.index');
+
+Route::get('/booking/create', [BookingController::class, 'create'])
+    ->middleware('auth')
+    ->name('booking.create');
+
+Route::post('/booking', [BookingController::class, 'store'])
+    ->middleware('auth')
+    ->name('booking.store');
 
 Route::get('/admin/peminjaman', [BookingQueueController::class, 'index'])
     ->middleware(['auth', 'role:admin'])
@@ -50,6 +60,21 @@ Route::patch(
 Route::get('/peminjaman', [BookingHistoryController::class, 'index'])
     ->middleware('auth')
     ->name('peminjaman.index');
+
+Route::get('/peminjaman/{id}/edit', [BookingController::class, 'edit'])
+    ->middleware('auth')
+    ->whereNumber('id')
+    ->name('peminjaman.edit');
+
+Route::put('/peminjaman/{id}', [BookingController::class, 'update'])
+    ->middleware('auth')
+    ->whereNumber('id')
+    ->name('peminjaman.update');
+
+Route::delete('/peminjaman/{id}', [BookingController::class, 'destroy'])
+    ->middleware('auth')
+    ->whereNumber('id')
+    ->name('peminjaman.destroy');
 
 Route::get('/peminjaman/{id}', [BookingDetailController::class, 'show'])
     ->middleware('auth')
@@ -68,9 +93,11 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/peminjaman/{booking}/bukti', [BookingProofController::class, 'store'])
         ->name('peminjaman.bukti.store');
+
     Route::get('/peminjaman/{booking}/bukti/{category}', [BookingProofController::class, 'show'])
         ->whereIn('category', ['ruangan', 'kunci'])
         ->name('peminjaman.bukti.show');
+
     Route::post('/admin/peminjaman/{booking}/pemeriksaan', [BookingProofController::class, 'inspect'])
         ->middleware('role:admin')
         ->name('admin.peminjaman.pemeriksaan.store');

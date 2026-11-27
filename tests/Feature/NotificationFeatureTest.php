@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\Booking;
 use App\Models\Notification;
-use App\Models\Room;
 use App\Models\User;
 use App\Services\NotificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -18,15 +17,6 @@ class NotificationFeatureTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function createRoom(): Room
-    {
-        return Room::create([
-            'name' => 'Sekretariat BEM UPNVJ',
-            'location' => 'Sekretariat BEM UPNVJ',
-            'description' => 'Ruang sekretariat bersama untuk pengujian.',
-        ]);
-    }
-
     private function createUser(string $email, string $unitName, string $unitType = 'bidang', string $role = 'unit'): User
     {
         return User::create([
@@ -39,26 +29,23 @@ class NotificationFeatureTest extends TestCase
         ]);
     }
 
-    private function createBooking(User $owner, Room $room, array $overrides = []): Booking
-    {
-        return Booking::create(array_merge([
-            'user_id' => $owner->id,
-            'room_id' => $room->id,
-            'tanggal' => '2026-11-26',
-            'start_time' => '10:00:00',
-            'end_time' => '12:00:00',
-            'activity_description' => 'Rapat koordinasi pengujian notifikasi',
-            'pic_name' => 'Adis',
-            'pic_division' => $owner->unit_name,
-            'status' => 'Menunggu',
-        ], $overrides));
-    }
+    private function createBooking(User $owner, array $overrides = []): Booking
+{
+    return Booking::create(array_merge([
+        'user_id' => $owner->id,
+        'tanggal' => '2026-11-26',
+        'start_time' => '10:00:00',
+        'end_time' => '12:00:00',
+        'activity_description' => 'Rapat koordinasi pengujian notifikasi',
+        'pic_name' => 'Adis',
+        'status' => 'Menunggu',
+    ], $overrides));
+}
 
     public function test_guest_is_redirected_to_login_from_notification_routes(): void
     {
-        $room = $this->createRoom();
         $ekraf = $this->createUser('ekraf@sekata.test', 'Bidang Ekraf');
-        $booking = $this->createBooking($ekraf, $room, ['status' => 'Disetujui']);
+        $booking = $this->createBooking($ekraf, ['status' => 'Disetujui']);
         $notification = NotificationService::notifyBookingDecision($booking);
 
         $this->get('/notifikasi')->assertRedirect(route('login'));
@@ -67,12 +54,11 @@ class NotificationFeatureTest extends TestCase
 
     public function test_sppi_receives_new_booking_notification_and_badge_only_for_recipient(): void
     {
-        $room = $this->createRoom();
         $sppi = $this->createUser('sppi@sekata.test', 'Biro SPPI', 'biro', 'admin');
         $ekraf = $this->createUser('ekraf@sekata.test', 'Bidang Ekraf');
         $pengkeima = $this->createUser('pengkeima@sekata.test', 'Bidang Pengkeima');
 
-        $booking = $this->createBooking($ekraf, $room, ['status' => 'Menunggu']);
+        $booking = $this->createBooking($ekraf, ['status' => 'Menunggu']);
         NotificationService::notifyBookingCreated($booking);
 
         $this->assertDatabaseHas('notifications', [
@@ -105,24 +91,23 @@ class NotificationFeatureTest extends TestCase
 
     public function test_owner_receives_decision_and_proof_review_notifications_with_reasons_and_notes(): void
     {
-        $room = $this->createRoom();
         $sppi = $this->createUser('sppi@sekata.test', 'Biro SPPI', 'biro', 'admin');
         $ekraf = $this->createUser('ekraf@sekata.test', 'Bidang Ekraf');
         $pengkeima = $this->createUser('pengkeima@sekata.test', 'Bidang Pengkeima');
 
-        $approved = $this->createBooking($ekraf, $room, [
+        $approved = $this->createBooking($ekraf, [
             'status' => 'Disetujui',
             'decision_reason' => 'Slot kosong dan jadwal sesuai.',
         ]);
-        $rejected = $this->createBooking($ekraf, $room, [
+        $rejected = $this->createBooking($ekraf, [
             'status' => 'Ditolak',
             'decision_reason' => 'Bentrok agenda BEM.',
         ]);
-        $revision = $this->createBooking($ekraf, $room, [
+        $revision = $this->createBooking($ekraf, [
             'status' => 'Perlu Perbaikan',
             'inspection_note' => 'Foto kunci kurang jelas.',
         ]);
-        $completed = $this->createBooking($ekraf, $room, [
+        $completed = $this->createBooking($ekraf, [
             'status' => 'Selesai',
             'inspection_note' => 'Ruangan bersih dan kunci kembali.',
         ]);
@@ -147,12 +132,11 @@ class NotificationFeatureTest extends TestCase
 
     public function test_other_users_cannot_mark_someone_elses_notification_as_read(): void
     {
-        $room = $this->createRoom();
         $sppi = $this->createUser('sppi@sekata.test', 'Biro SPPI', 'biro', 'admin');
         $ekraf = $this->createUser('ekraf@sekata.test', 'Bidang Ekraf');
         $pengkeima = $this->createUser('pengkeima@sekata.test', 'Bidang Pengkeima');
 
-        $booking = $this->createBooking($ekraf, $room, ['status' => 'Disetujui']);
+        $booking = $this->createBooking($ekraf, ['status' => 'Disetujui']);
         $notification = NotificationService::notifyBookingDecision($booking);
 
         $this->actingAs($pengkeima)
@@ -169,11 +153,10 @@ class NotificationFeatureTest extends TestCase
 
     public function test_recipient_can_mark_as_read_and_repeated_mark_as_read_stays_consistent(): void
     {
-        $room = $this->createRoom();
         $ekraf = $this->createUser('ekraf@sekata.test', 'Bidang Ekraf');
 
-        $booking1 = $this->createBooking($ekraf, $room, ['status' => 'Disetujui']);
-        $booking2 = $this->createBooking($ekraf, $room, ['status' => 'Ditolak']);
+        $booking1 = $this->createBooking($ekraf, ['status' => 'Disetujui']);
+        $booking2 = $this->createBooking($ekraf, ['status' => 'Ditolak']);
 
         $first = NotificationService::notifyBookingDecision($booking1);
         NotificationService::notifyBookingDecision($booking2);
@@ -203,12 +186,11 @@ class NotificationFeatureTest extends TestCase
 
     public function test_filter_unread_empty_state_and_pagination_work(): void
     {
-        $room = $this->createRoom();
         $ekraf = $this->createUser('ekraf@sekata.test', 'Bidang Ekraf');
         $pengkeima = $this->createUser('pengkeima@sekata.test', 'Bidang Pengkeima');
 
         for ($i = 1; $i <= 12; $i++) {
-            $booking = $this->createBooking($ekraf, $room, [
+            $booking = $this->createBooking($ekraf, [
                 'status' => 'Disetujui',
                 'decision_reason' => 'Keputusan #' . $i,
             ]);
@@ -238,14 +220,13 @@ class NotificationFeatureTest extends TestCase
 
     public function test_rolled_back_transaction_does_not_leave_fake_notifications(): void
     {
-        $room = $this->createRoom();
         $this->createUser('sppi@sekata.test', 'Biro SPPI', 'biro', 'admin');
         $ekraf = $this->createUser('ekraf@sekata.test', 'Bidang Ekraf');
 
         // Rollback saat submit pengajuan baru
         try {
-            DB::transaction(function () use ($ekraf, $room) {
-                $booking = $this->createBooking($ekraf, $room, ['status' => 'Menunggu']);
+            DB::transaction(function () use ($ekraf) {
+                $booking = $this->createBooking($ekraf, ['status' => 'Menunggu']);
                 NotificationService::notifyBookingCreated($booking);
 
                 throw new RuntimeException('Simulasi gagal transaksi submit');
@@ -258,7 +239,7 @@ class NotificationFeatureTest extends TestCase
         $this->assertSame(0, Notification::count());
 
         // Rollback saat perubahan keputusan SPPI
-        $existing = $this->createBooking($ekraf, $room, ['status' => 'Menunggu']);
+        $existing = $this->createBooking($ekraf, ['status' => 'Menunggu']);
 
         try {
             DB::transaction(function () use ($existing) {
@@ -280,12 +261,11 @@ class NotificationFeatureTest extends TestCase
 
     public function test_invalid_or_non_occurring_transitions_do_not_create_extra_notifications(): void
     {
-        $room = $this->createRoom();
         $this->createUser('sppi@sekata.test', 'Biro SPPI', 'biro', 'admin');
         $ekraf = $this->createUser('ekraf@sekata.test', 'Bidang Ekraf');
 
-        $pending = $this->createBooking($ekraf, $room, ['status' => 'Menunggu']);
-        $approved = $this->createBooking($ekraf, $room, ['status' => 'Disetujui']);
+        $pending = $this->createBooking($ekraf, ['status' => 'Menunggu']);
+        $approved = $this->createBooking($ekraf, ['status' => 'Disetujui']);
 
         // Status tidak sesuai kontrak ditolak tanpa membuat notifikasi
         try {
@@ -334,12 +314,11 @@ class NotificationFeatureTest extends TestCase
 
     public function test_sppi_decision_via_patch_route_creates_one_notification_for_owner(): void
     {
-        $room = $this->createRoom();
         $sppi = $this->createUser('sppi@sekata.test', 'Biro SPPI', 'biro', 'admin');
         $ekraf = $this->createUser('ekraf@sekata.test', 'Bidang Ekraf');
         $pengkeima = $this->createUser('pengkeima@sekata.test', 'Bidang Pengkeima');
 
-        $approvedBooking = $this->createBooking($ekraf, $room, ['status' => 'Menunggu']);
+        $approvedBooking = $this->createBooking($ekraf, ['status' => 'Menunggu']);
 
         $this->actingAs($sppi)
             ->patch(route('admin.peminjaman.decide', $approvedBooking->id), [
@@ -360,7 +339,7 @@ class NotificationFeatureTest extends TestCase
         $this->assertSame(0, Notification::forUser($sppi->id)->count());
 
         // Uji juga keputusan Ditolak melalui route PATCH yang sama
-        $rejectedBooking = $this->createBooking($ekraf, $room, [
+        $rejectedBooking = $this->createBooking($ekraf, [
             'tanggal' => '2026-11-27',
             'status' => 'Menunggu',
         ]);
@@ -383,11 +362,10 @@ class NotificationFeatureTest extends TestCase
 
     public function test_repeated_decision_via_patch_route_does_not_add_extra_notification(): void
     {
-        $room = $this->createRoom();
         $sppi = $this->createUser('sppi@sekata.test', 'Biro SPPI', 'biro', 'admin');
         $ekraf = $this->createUser('ekraf@sekata.test', 'Bidang Ekraf');
 
-        $booking = $this->createBooking($ekraf, $room, ['status' => 'Menunggu']);
+        $booking = $this->createBooking($ekraf, ['status' => 'Menunggu']);
 
         $this->actingAs($sppi)
             ->patch(route('admin.peminjaman.decide', $booking->id), [
@@ -411,11 +389,10 @@ class NotificationFeatureTest extends TestCase
 
     public function test_invalid_decision_via_patch_route_does_not_create_notification(): void
     {
-        $room = $this->createRoom();
         $sppi = $this->createUser('sppi@sekata.test', 'Biro SPPI', 'biro', 'admin');
         $ekraf = $this->createUser('ekraf@sekata.test', 'Bidang Ekraf');
 
-        $booking = $this->createBooking($ekraf, $room, ['status' => 'Menunggu']);
+        $booking = $this->createBooking($ekraf, ['status' => 'Menunggu']);
 
         // Alasan kosong ditolak validasi
         $this->actingAs($sppi)
@@ -447,12 +424,11 @@ class NotificationFeatureTest extends TestCase
 
     public function test_notification_detail_link_uses_peminjaman_show_route_and_enforces_authorization(): void
     {
-        $room = $this->createRoom();
         $sppi = $this->createUser('sppi@sekata.test', 'Biro SPPI', 'biro', 'admin');
         $ekraf = $this->createUser('ekraf@sekata.test', 'Bidang Ekraf');
         $pengkeima = $this->createUser('pengkeima@sekata.test', 'Bidang Pengkeima');
 
-        $booking = $this->createBooking($ekraf, $room, [
+        $booking = $this->createBooking($ekraf, [
             'status' => 'Disetujui',
             'decision_reason' => 'Disetujui untuk rapat.',
         ]);
@@ -490,12 +466,11 @@ class NotificationFeatureTest extends TestCase
 
     public function test_proof_inspection_perlu_perbaikan_via_endpoint_creates_one_notification_for_owner(): void
     {
-        $room = $this->createRoom();
         $sppi = $this->createUser('sppi@sekata.test', 'Biro SPPI', 'biro', 'admin');
         $ekraf = $this->createUser('ekraf@sekata.test', 'Bidang Ekraf');
         $pengkeima = $this->createUser('pengkeima@sekata.test', 'Bidang Pengkeima');
 
-        $booking = $this->createBooking($ekraf, $room, ['status' => 'Periksa Bukti']);
+        $booking = $this->createBooking($ekraf, ['status' => 'Periksa Bukti']);
         $this->attachCompleteProofs($booking);
 
         $this->actingAs($sppi)
@@ -524,11 +499,10 @@ class NotificationFeatureTest extends TestCase
 
     public function test_proof_inspection_selesai_via_endpoint_creates_one_notification_for_owner(): void
     {
-        $room = $this->createRoom();
         $sppi = $this->createUser('sppi@sekata.test', 'Biro SPPI', 'biro', 'admin');
         $ekraf = $this->createUser('ekraf@sekata.test', 'Bidang Ekraf');
 
-        $booking = $this->createBooking($ekraf, $room, ['status' => 'Periksa Bukti']);
+        $booking = $this->createBooking($ekraf, ['status' => 'Periksa Bukti']);
         $this->attachCompleteProofs($booking);
 
         $this->actingAs($sppi)
@@ -555,11 +529,10 @@ class NotificationFeatureTest extends TestCase
 
     public function test_invalid_or_repeated_proof_inspection_via_endpoint_does_not_add_notification(): void
     {
-        $room = $this->createRoom();
         $sppi = $this->createUser('sppi@sekata.test', 'Biro SPPI', 'biro', 'admin');
         $ekraf = $this->createUser('ekraf@sekata.test', 'Bidang Ekraf');
 
-        $booking = $this->createBooking($ekraf, $room, ['status' => 'Periksa Bukti']);
+        $booking = $this->createBooking($ekraf, ['status' => 'Periksa Bukti']);
         $this->attachCompleteProofs($booking);
 
         // Permintaan perbaikan tanpa catatan ditolak validasi dan tidak membuat notifikasi
