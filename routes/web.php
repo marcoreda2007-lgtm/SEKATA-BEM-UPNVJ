@@ -71,6 +71,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/peminjaman/{booking}/bukti/{category}', [BookingProofController::class, 'show'])
         ->whereIn('category', ['ruangan', 'kunci'])
         ->name('peminjaman.bukti.show');
+    Route::get('/peminjaman/{booking}/bukti/{category}/unduh', [BookingProofController::class, 'download'])
+        ->whereIn('category', ['ruangan', 'kunci'])
+        ->name('peminjaman.bukti.download');
     Route::post('/admin/peminjaman/{booking}/pemeriksaan', [BookingProofController::class, 'inspect'])
         ->middleware('role:admin')
         ->name('admin.peminjaman.pemeriksaan.store');

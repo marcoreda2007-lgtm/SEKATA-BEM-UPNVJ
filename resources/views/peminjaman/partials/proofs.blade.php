@@ -15,6 +15,13 @@
         Waktu di bawah adalah waktu unggah yang dicatat server, bukan waktu foto diambil.
     </p>
 
+    {{-- Error umum tetap tampil walau tidak ada form, misalnya submit setelah Selesai. --}}
+    @foreach (['booking', 'category', 'file'] as $field)
+        @error($field)
+            <div class="alert alert-danger py-2 small mb-3">{{ $message }}</div>
+        @enderror
+    @endforeach
+
     <div class="row g-3 mb-3">
         @foreach ($labels as $category => $label)
             @php $proof = $proofs->get($category); @endphp
@@ -32,6 +39,10 @@
                         @if ($proof->requires_replacement)
                             <span class="pill-perbaikan mt-2 d-inline-block">Perlu diperbaiki</span>
                         @endif
+                        <div class="mt-2">
+                            <a href="{{ route('peminjaman.bukti.download', [$booking, $category]) }}"
+                               class="btn btn-sekata-secondary btn-sm">Unduh foto</a>
+                        </div>
                     @else
                         <div class="detail-meta-sm">Belum diunggah.</div>
                     @endif
@@ -62,12 +73,6 @@
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>
-                @error('category')
-                    <div class="alert alert-danger py-2 small">{{ $message }}</div>
-                @enderror
-                @error('file')
-                    <div class="alert alert-danger py-2 small">{{ $message }}</div>
-                @enderror
                 <button type="submit" class="btn btn-sekata-primary btn-sm">Kirim foto pengganti</button>
             </form>
         @else
@@ -89,12 +94,6 @@
                     @enderror
                 </div>
             @endforeach
-            @error('booking')
-                <div class="alert alert-danger py-2 small">{{ $message }}</div>
-            @enderror
-            @error('file')
-                <div class="alert alert-danger py-2 small">{{ $message }}</div>
-            @enderror
             <button type="submit" class="btn btn-sekata-primary btn-sm">Kirim bukti</button>
         </form>
     @endif
@@ -140,12 +139,6 @@
                     <div class="invalid-feedback">{{ $message }}</div>
                 @enderror
             </div>
-            @error('booking')
-                <div class="alert alert-danger py-2 small">{{ $message }}</div>
-            @enderror
-            @error('file')
-                <div class="alert alert-danger py-2 small">{{ $message }}</div>
-            @enderror
             <button type="submit" class="btn btn-sekata-primary btn-sm">Simpan hasil pemeriksaan</button>
         </form>
     @endif

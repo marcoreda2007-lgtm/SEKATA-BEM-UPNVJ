@@ -22,11 +22,25 @@ class BookingProofController extends Controller
     {
         $this->ensureOwner($request, $booking);
 
+        // File yang melewati upload_max_filesize tidak divalidasi sebagai gambar oleh PHP,
+        // jadi beri pesan ukuran yang jelas sebelum aturan validasi lain berbunyi.
+        foreach (self::CATEGORIES as $category) {
+            if ($request->file($category)?->getError() === UPLOAD_ERR_INI_SIZE) {
+                throw ValidationException::withMessages([
+                    $category => 'Ukuran foto melebihi batas unggah server ('.ini_get('upload_max_filesize').'). Kompres foto lalu coba lagi.',
+                ]);
+            }
+        }
+
         // Bentuk file divalidasi sebelum apa pun disimpan, untuk kedua alur.
+        $maxKb = (int) config('proof.photo_max_kb');
         $request->validate([
-            'ruangan' => ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png', 'max:5120'],
-            'kunci' => ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png', 'max:5120'],
+            'ruangan' => ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png', 'max:'.$maxKb],
+            'kunci' => ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png', 'max:'.$maxKb],
             'category' => ['nullable', 'in:ruangan,kunci'],
+        ], [
+            'ruangan.max' => 'Ukuran foto maksimal '.intdiv($maxKb, 1024).' MB.',
+            'kunci.max' => 'Ukuran foto maksimal '.intdiv($maxKb, 1024).' MB.',
         ]);
 
         $storedPaths = [];
@@ -80,13 +94,24 @@ class BookingProofController extends Controller
 
     public function show(Request $request, Booking $booking, string $category): StreamedResponse
     {
-        $this->ensureOwnerOrAdmin($request, $booking);
-
-        abort_unless(in_array($category, self::CATEGORIES, true), 404);
-
-        $proof = $booking->proofs()->where('category', $category)->firstOrFail();
+        $proof = $this->findProof($request, $booking, $category);
 
         return Storage::disk('local')->response(
+            $proof->path,
+            $proof->original_name,
+            [
+                'Content-Type' => $proof->mime_type ?? 'application/octet-stream',
+                'Cache-Control' => 'private, no-store, max-age=0',
+            ],
+        );
+    }
+
+    public function download(Request $request, Booking $booking, string $category): StreamedResponse
+    {
+        $proof = $this->findProof($request, $booking, $category);
+
+        // download() mengirim Content-Disposition: attachment, jadi browser menyimpan filenya.
+        return Storage::disk('local')->download(
             $proof->path,
             $proof->original_name,
             [
@@ -269,5 +294,19 @@ class BookingProofController extends Controller
             $request->user()?->isAdmin() || (int) $request->user()?->id === (int) $booking->user_id,
             403,
         );
+    }
+
+    private function findProof(Request $request, Booking $booking, string $category): BookingProof
+    {
+        $this->ensureOwnerOrAdmin($request, $booking);
+
+        abort_unless(in_array($category, self::CATEGORIES, true), 404);
+
+        $proof = $booking->proofs()->where('category', $category)->firstOrFail();
+
+        // File bisa hilang dari disk; jangan biarkan menjadi error 500.
+        abort_unless(Storage::disk('local')->exists($proof->path), 404, 'File bukti tidak ditemukan.');
+
+        return $proof;
     }
 }
